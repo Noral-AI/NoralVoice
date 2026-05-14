@@ -52,6 +52,8 @@ class UserConfigurationValidator:
             ServiceProviders.ASSEMBLYAI.value: self._check_assemblyai_api_key,
             ServiceProviders.GLADIA.value: self._check_gladia_api_key,
             ServiceProviders.RIME.value: self._check_rime_api_key,
+            ServiceProviders.ANTHROPIC.value: self._check_anthropic_api_key,
+            ServiceProviders.NORALAI.value: self._check_noralai_api_key,
         }
 
     async def validate(
@@ -124,6 +126,20 @@ class UserConfigurationValidator:
                         {
                             "model": service_name,
                             "message": f"Invalid {provider} credentials",
+                        }
+                    ]
+            except ValueError as e:
+                return [{"model": service_name, "message": str(e)}]
+            return []
+
+        # NoralAI validator needs base_url from service_config
+        if provider == ServiceProviders.NORALAI.value:
+            try:
+                if not self._check_noralai_api_key(provider, service_config):
+                    return [
+                        {
+                            "model": service_name,
+                            "message": f"Invalid {provider} configuration",
                         }
                     ]
             except ValueError as e:
@@ -228,4 +244,18 @@ class UserConfigurationValidator:
         return True
 
     def _check_rime_api_key(self, model: str, api_key: str) -> bool:
+        return True
+
+    def _check_anthropic_api_key(self, model: str, api_key: str) -> bool:
+        # Accept any non-empty key shape. Live validation against Anthropic's
+        # /v1/messages would cost a token and is deferred to first real call.
+        if not api_key or not isinstance(api_key, str):
+            return False
+        return api_key.startswith("sk-ant-") or api_key.startswith("sk-")
+
+    def _check_noralai_api_key(self, model: str, service_config) -> bool:
+        # NoralAI endpoints are user-operated (e.g. RunPod). Validate that a
+        # base_url is configured; key shape varies by deployment.
+        if not getattr(service_config, "base_url", None):
+            raise ValueError("base_url is required for NoralAI services")
         return True
