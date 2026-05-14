@@ -28,6 +28,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://voice.noral.ai",
+  ),
   title: "NoralVoice",
   description: "Voice agent workflow builder by NoralAI",
 };

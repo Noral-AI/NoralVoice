@@ -264,10 +264,14 @@ export function AppSidebar() {
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/brand/noralai-primary.svg"
-                alt="NoralVoice"
-                className="h-7 w-auto"
+                src="/brand/noralai-symbol-bare.svg"
+                alt=""
+                aria-hidden="true"
+                className="h-7 w-7 shrink-0"
               />
+              <span className="text-xl font-extrabold tracking-tight">
+                noral<span className="text-primary">Voice</span>
+              </span>
               {versionInfo && (
                 <span
                   className="notranslate text-xs font-normal text-muted-foreground"
