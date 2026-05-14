@@ -91,25 +91,25 @@ async def check_dograh_quota(
                 # Require at least $0.10 for a short call
                 if remaining < 0.10:
                     logger.warning(
-                        f"Insufficient Dograh credits for key ...{api_key[-8:]}: "
+                        f"Insufficient model service credits for key ...{api_key[-8:]}: "
                         f"${remaining:.2f} remaining"
                     )
                     return QuotaCheckResult(
                         has_quota=False,
                         error_code="quota_exceeded",
                         error_message=(
-                            "You have exhausted your trial credits. "
-                            "Please email founders@dograh.com for additional Dograh credits "
-                            "or change providers in Models configurations."
+                            "You have exhausted your model service credits. "
+                            "Contact your NoralAI administrator for more credits, "
+                            "or switch to your own provider keys in Models configurations."
                         ),
                     )
 
                 logger.info(
-                    f"Dograh quota check passed for key ...{api_key[-8:]}: "
+                    f"Model service quota check passed for key ...{api_key[-8:]}: "
                     f"{remaining:.2f} credits remaining"
                 )
             except Exception as e:
-                logger.error(f"Failed to check quota for Dograh key: {str(e)}")
+                logger.error(f"Failed to check quota for model service key: {str(e)}")
                 error_str = str(e)
                 if "404" in error_str or "not found" in error_str.lower():
                     return QuotaCheckResult(
@@ -120,7 +120,7 @@ async def check_dograh_quota(
                 return QuotaCheckResult(
                     has_quota=False,
                     error_code="quota_check_failed",
-                    error_message="Could not verify Dograh credits. Please try again.",
+                    error_message="Could not verify model service credits. Please try again.",
                 )
 
         return QuotaCheckResult(has_quota=True)

@@ -1,0 +1,15 @@
+<svg viewBox="0 0 480 480" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="NoralAI stacked logo">
+  <title>NoralAI — stacked lockup</title>
+  <rect width="480" height="480" fill="#F5F1EA"></rect>
+
+  
+  <g transform="translate(200 180)">
+    <circle cx="0" cy="0" r="20" fill="#FF5B2E"></circle>
+    <path d="M 32 -32 A 48 48 0 0 1 32 32" stroke="#FF5B2E" stroke-width="6" fill="none" stroke-linecap="round"></path>
+    <path d="M 56 -50 A 76 76 0 0 1 56 50" stroke="#FF5B2E" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.55"></path>
+    <path d="M 80 -68 A 104 104 0 0 1 80 68" stroke="#FF5B2E" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.25"></path>
+  </g>
+
+  
+  <text x="240" y="370" text-anchor="middle" font-family="&#39;Inter Display&#39;,&#39;Inter Tight&#39;,&#39;Inter&#39;,&#39;Helvetica Neue&#39;,Arial,sans-serif" font-size="78" font-weight="800" letter-spacing="-3" fill="#0A1F2E">noral<tspan fill="#FF5B2E">AI</tspan></text>
+</svg>
