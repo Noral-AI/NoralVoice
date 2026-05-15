@@ -27,6 +27,8 @@ class IntegrationWebhookClient(BaseDBClient):
         event_type: str,
         target_url: str,
         secret: str,
+        reverse_rpc_url: Optional[str] = None,
+        reverse_rpc_secret: Optional[str] = None,
     ) -> IntegrationWebhookModel:
         async with self.async_session() as session:
             row = IntegrationWebhookModel(
@@ -34,6 +36,8 @@ class IntegrationWebhookClient(BaseDBClient):
                 event_type=event_type,
                 target_url=target_url,
                 secret=secret,
+                reverse_rpc_url=reverse_rpc_url,
+                reverse_rpc_secret=reverse_rpc_secret,
                 created_at=datetime.now(UTC),
             )
             session.add(row)
@@ -44,6 +48,31 @@ class IntegrationWebhookClient(BaseDBClient):
                 raise
             await session.refresh(row)
         return row
+
+    async def get_reverse_rpc_for_org(
+        self, organization_id: int
+    ) -> Optional[IntegrationWebhookModel]:
+        """Return the first integration_webhooks row for this org that
+        carries a non-null ``reverse_rpc_url``. Used by the
+        ``noralos://`` tool executor to find the per-org reverse-RPC
+        callback URL + secret.
+
+        Multiple rows could carry the same reverse-RPC config (one per
+        event-type the plugin subscribed to). They're all for the same
+        plugin install per org, so any non-null row is sufficient. The
+        partial index ``ix_integration_webhooks_reverse_rpc_org``
+        backs this lookup.
+        """
+        async with self.async_session() as session:
+            result = await session.execute(
+                select(IntegrationWebhookModel)
+                .where(
+                    IntegrationWebhookModel.organization_id == organization_id,
+                    IntegrationWebhookModel.reverse_rpc_url.is_not(None),
+                )
+                .limit(1)
+            )
+            return result.scalars().first()
 
     async def list_integration_webhooks(
         self, organization_id: int

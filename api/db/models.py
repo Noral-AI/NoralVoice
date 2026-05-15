@@ -895,6 +895,16 @@ class IntegrationWebhookModel(Base):
     # Last attempt outcome surfaced to the integration UI:
     # "ok", "http_<status>", "timeout", "connection_error", "error:<short>".
     last_status = Column(String(64), nullable=True)
+    # Phase 5d — reverse-RPC. When a NoralOS plugin registers a webhook
+    # it can also publish a callback URL + secret for the
+    # ``noralos://<plugin_id>/<tool_name>`` tool URL scheme. The executor
+    # picks any non-null row for the calling workflow's organization and
+    # POSTs there with an HMAC-SHA256 signature in the
+    # ``X-Noralos-Signature`` header. Reverse-direction secret is
+    # deliberately distinct from the outbound ``secret`` above so a leak
+    # of one doesn't compromise the other.
+    reverse_rpc_url = Column(String(2048), nullable=True)
+    reverse_rpc_secret = Column(String(64), nullable=True)
 
     organization = relationship("OrganizationModel")
 

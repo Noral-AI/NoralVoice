@@ -36,11 +36,35 @@ class IntegrationWebhookCreate(BaseModel):
     target_url: HttpUrl = Field(
         ..., description="HTTPS endpoint to POST the signed payload to."
     )
+    # Phase 5d — optional reverse-RPC config. Plugin clients that want
+    # to receive ``noralos://<plugin_id>/<tool_name>`` callbacks from
+    # workflow Agent nodes register their callback URL here. If
+    # ``reverse_rpc_secret`` is omitted the server generates one and
+    # returns it in the create response (same one-shot reveal as the
+    # outbound webhook ``secret``).
+    reverse_rpc_url: HttpUrl | None = Field(
+        default=None,
+        description=(
+            "Optional HTTPS endpoint NoralVoice will POST to when a "
+            "workflow Agent node invokes a `noralos://` tool. One per "
+            "organization is sufficient; if multiple rows carry a value, "
+            "the first non-null wins."
+        ),
+    )
+    reverse_rpc_secret: str | None = Field(
+        default=None,
+        max_length=64,
+        description=(
+            "Optional pre-shared HMAC-SHA256 key for the reverse-RPC "
+            "direction. Server generates one and returns it once if "
+            "omitted. Distinct from the outbound `secret`."
+        ),
+    )
 
 
 class IntegrationWebhookResponse(BaseModel):
-    """Returned on list / get. ``secret`` is OMITTED here — it's
-    returned exactly once on create."""
+    """Returned on list / get. ``secret`` and ``reverse_rpc_secret`` are
+    OMITTED here — they're returned exactly once on create."""
 
     id: int
     event_type: EventTypeLiteral
@@ -48,14 +72,18 @@ class IntegrationWebhookResponse(BaseModel):
     created_at: datetime
     last_fired_at: datetime | None = None
     last_status: str | None = None
+    # Phase 5d — expose the URL on read (lets operators verify their
+    # plugin install). The secret itself is still write-only.
+    reverse_rpc_url: str | None = None
 
 
 class IntegrationWebhookCreateResponse(IntegrationWebhookResponse):
-    """One-shot reveal of the per-registration HMAC secret. Returned
-    only on the POST response; the integration must persist it client-
-    side. ``GET`` and ``LIST`` redact it."""
+    """One-shot reveal of the per-registration HMAC secrets. Returned
+    only on the POST response; the integration must persist them client-
+    side. ``GET`` and ``LIST`` redact them."""
 
     secret: str
+    reverse_rpc_secret: str | None = None
 
 
 def _to_response(row, include_secret: bool = False):
@@ -66,9 +94,14 @@ def _to_response(row, include_secret: bool = False):
         "created_at": row.created_at,
         "last_fired_at": row.last_fired_at,
         "last_status": row.last_status,
+        "reverse_rpc_url": row.reverse_rpc_url,
     }
     if include_secret:
-        return IntegrationWebhookCreateResponse(**base, secret=row.secret)
+        return IntegrationWebhookCreateResponse(
+            **base,
+            secret=row.secret,
+            reverse_rpc_secret=row.reverse_rpc_secret,
+        )
     return IntegrationWebhookResponse(**base)
 
 
@@ -94,15 +127,24 @@ async def create_integration_webhook(
         raise HTTPException(status_code=400, detail="Unknown event_type")
 
     secret = secrets.token_urlsafe(32)
+    # Reverse-RPC config is optional. If a URL is supplied without a
+    # secret, generate one server-side; if neither is supplied, leave
+    # both NULL so the row participates only in the outbound path.
+    reverse_rpc_url = str(request.reverse_rpc_url) if request.reverse_rpc_url else None
+    reverse_rpc_secret: str | None = None
+    if reverse_rpc_url:
+        reverse_rpc_secret = request.reverse_rpc_secret or secrets.token_urlsafe(32)
     row = await db_client.create_integration_webhook(
         organization_id=user.selected_organization_id,
         event_type=request.event_type,
         target_url=str(request.target_url),
         secret=secret,
+        reverse_rpc_url=reverse_rpc_url,
+        reverse_rpc_secret=reverse_rpc_secret,
     )
     logger.info(
         f"integration_webhook registered id={row.id} org={user.selected_organization_id} "
-        f"event={request.event_type}"
+        f"event={request.event_type} reverse_rpc={'on' if reverse_rpc_url else 'off'}"
     )
     return _to_response(row, include_secret=True)
 
