@@ -849,6 +849,64 @@ class EmbedSessionModel(Base):
     workflow_run = relationship("WorkflowRunModel")
 
 
+class IntegrationWebhookModel(Base):
+    """Outbound webhook registrations for external integrations.
+
+    An external integration (the NoralOS plugin in Phase 1B+) registers
+    a callback URL for ``run.completed`` / ``run.failed`` /
+    ``campaign.progress`` events. When NoralVoice's workflow-run path
+    hits a terminal state, every matching registration fires with an
+    HMAC-signed payload.
+
+    One organization can register multiple endpoints per event type
+    (e.g. dev + prod plugin instances pointing at the same NoralVoice
+    org). The per-row ``secret`` is the HMAC key — generated server-side
+    on registration and returned exactly once.
+    """
+
+    __tablename__ = "integration_webhooks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(
+        Integer,
+        ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    event_type = Column(
+        Enum(
+            "run.completed",
+            "run.failed",
+            "campaign.progress",
+            name="integration_webhook_event_type",
+        ),
+        nullable=False,
+        index=True,
+    )
+    target_url = Column(String(2048), nullable=False)
+    # 32 url-safe bytes; HMAC-SHA256 key for the X-Signature header.
+    secret = Column(String(64), nullable=False)
+    created_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+    last_fired_at = Column(DateTime(timezone=True), nullable=True)
+    # Last attempt outcome surfaced to the integration UI:
+    # "ok", "http_<status>", "timeout", "connection_error", "error:<short>".
+    last_status = Column(String(64), nullable=True)
+
+    organization = relationship("OrganizationModel")
+
+    __table_args__ = (
+        Index(
+            "ix_integration_webhooks_org_event",
+            "organization_id",
+            "event_type",
+        ),
+    )
+
+
 class EmbedExchangeTokenModel(Base):
     """One-shot exchange tokens for the cross-domain iframe auth bridge.
 
