@@ -563,7 +563,7 @@ export default function UsagePage() {
                                                     <TableCell className="text-right font-medium">
                                                         {organizationPricing?.price_per_second_usd && run.charge_usd !== undefined && run.charge_usd !== null
                                                             ? `$${run.charge_usd.toFixed(2)}`
-                                                            : run.dograh_token_usage.toLocaleString()
+                                                            : run.token_usage.toLocaleString()
                                                         }
                                                     </TableCell>
                                                     <TableCell>
@@ -585,7 +585,7 @@ export default function UsagePage() {
                                     <div className="mt-4 p-3 bg-muted rounded-md">
                                         <p className="text-sm text-muted-foreground">
                                             Total for filtered period: <span className="font-semibold text-foreground">
-                                                {usageHistory.total_dograh_tokens.toLocaleString()} Tokens
+                                                {usageHistory.total_tokens.toLocaleString()} Tokens
                                             </span>
                                             {' • '}
                                             <span className="font-semibold text-foreground">

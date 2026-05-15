@@ -40,10 +40,10 @@ export function generateCode(
     const usedNames = new Set<string>();
 
     const lines: string[] = [];
-    lines.push(`import { Workflow } from "@dograh/sdk";`);
+    lines.push(`import { Workflow } from "@noralvoice/sdk";`);
     if (factoryNames.length > 0) {
         lines.push(
-            `import { ${factoryNames.join(", ")} } from "@dograh/sdk/typed";`,
+            `import { ${factoryNames.join(", ")} } from "@noralvoice/sdk/typed";`,
         );
     }
     lines.push("");

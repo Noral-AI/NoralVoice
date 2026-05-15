@@ -118,7 +118,7 @@ async def calculate_workflow_run_cost(workflow_run_id: int):
             **workflow_run.cost_info,
             "cost_breakdown": cost_breakdown,
             "total_cost_usd": float(cost_breakdown["total"]),
-            "dograh_token_usage": dograh_tokens,
+            "token_usage": dograh_tokens,
             "calculated_at": workflow_run.created_at.isoformat(),
             "call_duration_seconds": workflow_usage_info["call_duration_seconds"],
         }

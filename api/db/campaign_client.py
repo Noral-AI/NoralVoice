@@ -216,10 +216,15 @@ class CampaignClient(BaseDBClient):
                         "recording_url": run.recording_url,
                         "transcript_url": run.transcript_url,
                         "cost_info": {
-                            "dograh_token_usage": (
-                                run.cost_info.get("dograh_token_usage")
+                            "token_usage": (
+                                # Read new + legacy keys for backward compat
+                                run.cost_info.get("token_usage")
+                                or run.cost_info.get("dograh_token_usage")
                                 if run.cost_info
-                                and "dograh_token_usage" in run.cost_info
+                                and (
+                                    "token_usage" in run.cost_info
+                                    or "dograh_token_usage" in run.cost_info
+                                )
                                 else round(
                                     float(run.cost_info.get("total_cost_usd", 0)) * 100,
                                     2,

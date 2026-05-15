@@ -1,4 +1,4 @@
-"""Quota checking service for Dograh credits.
+"""Quota checking service for model service credits.
 
 This module provides reusable quota checking functionality that can be used
 across different endpoints (WebRTC signaling, telephony, public API triggers).
@@ -24,12 +24,12 @@ class QuotaCheckResult:
     error_code: str = ""
 
 
-async def check_dograh_quota(
+async def check_model_quota(
     user: UserModel, workflow_id: int | None = None
 ) -> QuotaCheckResult:
-    """Check if user has sufficient Dograh quota for making a call.
+    """Check if user has sufficient model service quota for making a call.
 
-    This function checks if the user is using any Dograh services (LLM, STT, TTS)
+    This function checks if the user is using any model services (LLM, STT, TTS)
     and validates that they have sufficient credits remaining.
 
     When ``workflow_id`` is provided, the workflow's per-workflow
@@ -44,7 +44,7 @@ async def check_dograh_quota(
 
     Returns:
         QuotaCheckResult with has_quota=True if user has sufficient quota or
-        is not using Dograh services, or has_quota=False with error_message
+        is not using model services, or has_quota=False with error_message
         if quota is insufficient.
     """
     try:
@@ -60,28 +60,28 @@ async def check_dograh_quota(
                 if model_overrides:
                     user_config = resolve_effective_config(user_config, model_overrides)
 
-        # Check if user is using any Dograh service
-        using_dograh = False
-        dograh_api_keys = set()
+        # Check if user is using any model service
+        using_model_service = False
+        model_api_keys = set()
 
         if user_config.llm and user_config.llm.provider == ServiceProviders.DOGRAH:
-            using_dograh = True
-            dograh_api_keys.add(user_config.llm.api_key)
+            using_model_service = True
+            model_api_keys.add(user_config.llm.api_key)
 
         if user_config.stt and user_config.stt.provider == ServiceProviders.DOGRAH:
-            using_dograh = True
-            dograh_api_keys.add(user_config.stt.api_key)
+            using_model_service = True
+            model_api_keys.add(user_config.stt.api_key)
 
         if user_config.tts and user_config.tts.provider == ServiceProviders.DOGRAH:
-            using_dograh = True
-            dograh_api_keys.add(user_config.tts.api_key)
+            using_model_service = True
+            model_api_keys.add(user_config.tts.api_key)
 
-        # If not using Dograh, quota check passes
-        if not using_dograh:
+        # If not using the model service, quota check passes
+        if not using_model_service:
             return QuotaCheckResult(has_quota=True)
 
-        # Check quota for ALL Dograh keys
-        for api_key in dograh_api_keys:
+        # Check quota for ALL model-service keys
+        for api_key in model_api_keys:
             try:
                 usage = await mps_service_key_client.check_service_key_usage(
                     api_key, created_by=user.provider_id
@@ -131,10 +131,10 @@ async def check_dograh_quota(
         return QuotaCheckResult(has_quota=True)
 
 
-async def check_dograh_quota_by_user_id(
+async def check_model_quota_by_user_id(
     user_id: int, workflow_id: int | None = None
 ) -> QuotaCheckResult:
-    """Check Dograh quota by user ID.
+    """Check model service quota by user ID.
 
     Convenience function that fetches the user and then checks quota. When
     ``workflow_id`` is provided, the workflow's ``model_overrides`` are
@@ -155,4 +155,4 @@ async def check_dograh_quota_by_user_id(
             has_quota=False,
             error_message="User not found",
         )
-    return await check_dograh_quota(user, workflow_id=workflow_id)
+    return await check_model_quota(user, workflow_id=workflow_id)

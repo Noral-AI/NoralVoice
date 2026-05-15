@@ -22,7 +22,7 @@ from starlette.websockets import WebSocketDisconnect
 
 from api.db import db_client
 from api.enums import CallType, WorkflowRunState
-from api.services.quota_service import check_dograh_quota_by_user_id
+from api.services.quota_service import check_model_quota_by_user_id
 from api.services.telephony import registry as telephony_registry
 
 router = APIRouter(prefix="/agent-stream")
@@ -67,7 +67,7 @@ async def agent_stream_websocket(
         await websocket.close(code=1008, reason="Workflow not found")
         return
 
-    quota_result = await check_dograh_quota_by_user_id(
+    quota_result = await check_model_quota_by_user_id(
         workflow.user_id, workflow_id=workflow.id
     )
     if not quota_result.has_quota:

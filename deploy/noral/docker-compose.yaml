@@ -1,5 +1,6 @@
 services:
   postgres:
+    container_name: noralvoice-postgres
     image: pgvector/pgvector:pg17
     environment:
       POSTGRES_USER: postgres
@@ -23,6 +24,7 @@ services:
       - app-network
 
   redis:
+    container_name: noralvoice-redis
     image: redis:7
     ports:
       - "6379:6379"
@@ -61,7 +63,7 @@ services:
 
   dograh-init:
     image: bash:5.2
-    container_name: dograh_init
+    container_name: noralvoice-init
     profiles: ["remote", "local-turn"]
     environment:
       ENVIRONMENT: "${ENVIRONMENT:-local}"
@@ -123,6 +125,7 @@ services:
       - app-network
 
   api:
+    container_name: noralvoice-api
     image: ${REGISTRY:-dograhai}/dograh-api:latest
     volumes:
       - shared-tmp:/tmp
@@ -203,6 +206,7 @@ services:
       - app-network
 
   ui:
+    container_name: noralvoice-ui
     image: ${REGISTRY:-dograhai}/dograh-ui:latest
     environment:
       HOSTNAME: "0.0.0.0"
