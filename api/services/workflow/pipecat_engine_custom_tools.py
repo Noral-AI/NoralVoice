@@ -32,6 +32,10 @@ from api.services.workflow.tools.custom_tool import (
     execute_http_tool,
     tool_to_function_schema,
 )
+from api.services.workflow.tools.noralos_tool import (
+    execute_noralos_tool,
+    is_noralos_url,
+)
 
 if TYPE_CHECKING:
     from api.services.workflow.pipecat_engine import PipecatEngine
@@ -317,12 +321,30 @@ class CustomToolManager:
                         )
                     )
 
-                result = await execute_http_tool(
-                    tool=tool,
-                    arguments=function_call_params.arguments,
-                    call_context_vars=self._engine._call_context_vars,
-                    organization_id=await self.get_organization_id(),
+                organization_id = await self.get_organization_id()
+                # Phase 5d — the tool's configured URL drives the
+                # executor choice. The legacy ``execute_http_tool`` path
+                # handles ``https://...`` (and ``http://``) custom HTTP
+                # tools. The new ``noralos://<plugin_id>/<tool_name>``
+                # scheme routes through the reverse-RPC executor, which
+                # POSTs through the per-org integration_webhooks row.
+                tool_url = (
+                    (tool.definition or {}).get("config", {}).get("url", "") or ""
                 )
+                if organization_id is not None and is_noralos_url(tool_url):
+                    result = await execute_noralos_tool(
+                        url=tool_url,
+                        arguments=function_call_params.arguments,
+                        organization_id=organization_id,
+                        run_id=self._engine._workflow_run_id,
+                    )
+                else:
+                    result = await execute_http_tool(
+                        tool=tool,
+                        arguments=function_call_params.arguments,
+                        call_context_vars=self._engine._call_context_vars,
+                        organization_id=organization_id,
+                    )
 
                 await function_call_params.result_callback(result)
 
