@@ -1,4 +1,4 @@
-# @dograh/sdk
+# @noralai/voice-sdk
 
 Typed builder for Dograh voice-AI workflows. Fetches the node-spec catalog from
 the Dograh backend at session start, validates every call against it at the
@@ -8,9 +8,9 @@ call site, and produces wire-format JSON that round-trips through the Python
 ## Install
 
 ```bash
-npm install @dograh/sdk
+npm install @noralai/voice-sdk
 # or
-pnpm add @dograh/sdk
+pnpm add @noralai/voice-sdk
 ```
 
 For local development against a checked-out monorepo, add a tsconfig paths
@@ -19,7 +19,7 @@ entry:
 ```json
 {
   "paths": {
-    "@dograh/sdk": ["../sdk/typescript/src/index.ts"]
+    "@noralai/voice-sdk": ["../sdk/typescript/src/index.ts"]
   }
 }
 ```
@@ -27,7 +27,7 @@ entry:
 ## Usage
 
 ```ts
-import { DograhClient, Workflow } from "@dograh/sdk";
+import { DograhClient, Workflow } from "@noralai/voice-sdk";
 
 const client = new DograhClient({
   baseUrl: "http://localhost:8000",
