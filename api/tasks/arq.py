@@ -39,6 +39,7 @@ REDIS_SETTINGS = RedisSettings(
     ssl_check_hostname=False if use_ssl else None,
 )
 
+from api.services.integration_webhooks import fire_integration_webhooks
 from api.tasks.campaign_tasks import (
     process_campaign_batch,
     sync_campaign_source,
@@ -59,6 +60,7 @@ class WorkerSettings:
         sync_campaign_source,
         process_campaign_batch,
         process_knowledge_base_document,
+        fire_integration_webhooks,
     ]
     cron_jobs = []
     redis_settings = REDIS_SETTINGS
