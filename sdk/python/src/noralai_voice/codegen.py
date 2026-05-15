@@ -2,16 +2,16 @@
 
 Reads NodeSpecs (from the live backend, a JSON file, or the in-process
 registry) and emits a dataclass per node type into an output directory.
-The generated files live under `dograh_sdk.typed` and are committed to
-the repository so `pip install dograh-sdk` ships typed classes without
+The generated files live under `noralai_voice.typed` and are committed to
+the repository so `pip install noralai-voice` ships typed classes without
 requiring a regen step.
 
 Run manually:
 
-    python -m dograh_sdk.codegen --api http://localhost:8000 \\
-        --out sdk/python/src/dograh_sdk/typed
+    python -m noralai_voice.codegen --api http://localhost:8000 \\
+        --out sdk/python/src/noralai_voice/typed
 
-    python -m dograh_sdk.codegen --input specs.json \\
+    python -m noralai_voice.codegen --input specs.json \\
         --out ./my_typed
 """
 
@@ -126,7 +126,7 @@ def _format_docstring(text: str, indent: int = 4) -> str:
 
 _FILE_HEADER = '''"""GENERATED — do not edit by hand.
 
-Regenerate with `python -m dograh_sdk.codegen` against the target
+Regenerate with `python -m noralai_voice.codegen` against the target
 Dograh backend. Source of truth: each node's NodeSpec in the backend's
 `api/services/workflow/node_specs/` directory.
 """
@@ -136,7 +136,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, ClassVar, Literal, Optional
 
-from dograh_sdk.typed._base import TypedNode
+from noralai_voice.typed._base import TypedNode
 '''
 
 
@@ -231,7 +231,7 @@ def _render_init_module(spec_names: list[str]) -> str:
         '"""GENERATED — do not edit by hand.',
         "",
         "Re-exports every typed node class so users can write",
-        "`from dograh_sdk.typed import StartCall, AgentNode`.",
+        "`from noralai_voice.typed import StartCall, AgentNode`.",
         '"""',
         "",
     ]
@@ -240,10 +240,10 @@ def _render_init_module(spec_names: list[str]) -> str:
         module_name = re.sub(r"(?<!^)(?=[A-Z])", "_", spec_name).lower()
         # Handle abbreviations (qa, webhook, trigger, etc.): no underscore needed.
         class_name = _spec_class_name(spec_name)
-        lines.append(f"from dograh_sdk.typed.{module_name} import {class_name}")
+        lines.append(f"from noralai_voice.typed.{module_name} import {class_name}")
         exports.append(class_name)
 
-    lines.append("from dograh_sdk.typed._base import TypedNode")
+    lines.append("from noralai_voice.typed._base import TypedNode")
     exports.append("TypedNode")
     lines.append("")
     lines.append("__all__ = [")
@@ -303,7 +303,7 @@ def _load_specs_from_api(base_url: str) -> list[dict[str, Any]]:
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
-        prog="python -m dograh_sdk.codegen",
+        prog="python -m noralai_voice.codegen",
         description="Generate typed SDK dataclasses from the Dograh node-spec catalog.",
     )
     source = parser.add_mutually_exclusive_group(required=True)

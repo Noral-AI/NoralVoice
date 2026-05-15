@@ -1,6 +1,6 @@
 """Base class for generated per-node-type dataclasses.
 
-The typed SDK (`dograh_sdk.typed`) contains one generated dataclass per
+The typed SDK (`noralai_voice.typed`) contains one generated dataclass per
 node spec. Each subclass declares its spec name as a class-level `type`
 and carries fields mirroring the spec's properties — giving IDEs full
 autocomplete, docstrings on hover, and mypy/pyright coverage.

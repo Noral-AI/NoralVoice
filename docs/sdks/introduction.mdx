@@ -5,8 +5,8 @@ description: "Build and operate Dograh voice AI agents programmatically from Pyt
 
 Dograh ships official SDKs for **Python** and **TypeScript** that wrap the Dograh REST API and the workflow builder. Use them to create or edit agents, place outbound calls, and inspect runs from your own code.
 
-- **Python** — [`dograh-sdk`](https://pypi.org/project/dograh-sdk/) on PyPI
-- **TypeScript** — [`@dograh/sdk`](https://www.npmjs.com/package/@dograh/sdk) on npm
+- **Python** — [`noralai-voice`](https://pypi.org/project/noralai-voice/) on PyPI
+- **TypeScript** — [`@noralai/voice-sdk`](https://www.npmjs.com/package/@noralai/voice-sdk) on npm
 
 Both packages are generated from the same backend OpenAPI spec, so the method surface is equivalent — only the naming convention differs (`snake_case` in Python, `camelCase` in TypeScript).
 
@@ -14,10 +14,10 @@ Both packages are generated from the same backend OpenAPI spec, so the method su
 
 <CodeGroup>
 ```bash Python
-pip install dograh-sdk
+pip install noralai-voice
 ```
 ```bash TypeScript
-npm install @dograh/sdk
+npm install @noralai/voice-sdk
 ```
 </CodeGroup>
 
@@ -29,7 +29,7 @@ Both SDKs read the API key from the `DOGRAH_API_KEY` environment variable by def
 
 <CodeGroup>
 ```python Python
-from dograh_sdk import DograhClient
+from noralai_voice import DograhClient
 
 client = DograhClient(
     base_url="https://app.dograh.com",
@@ -37,7 +37,7 @@ client = DograhClient(
 )
 ```
 ```typescript TypeScript
-import { DograhClient } from "@dograh/sdk";
+import { DograhClient } from "@noralai/voice-sdk";
 
 const client = new DograhClient({
     baseUrl: "https://app.dograh.com",
