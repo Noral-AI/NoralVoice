@@ -4,18 +4,14 @@ import type { Team } from "@stackframe/stack";
 import {
   AlertTriangle,
   AudioLines,
-  Brain,
   ChevronLeft,
   ChevronRight,
-  CircleDollarSign,
   Database,
   FileText,
   Home,
-  Key,
   LogOut,
   type LucideIcon,
   Megaphone,
-  Phone,
   Settings,
   TrendingUp,
   Workflow,
@@ -72,6 +68,11 @@ type SidebarNavSection = {
 const TELEPHONY_WARNING_DEADLINE = "15 May 2026";
 const TELEPHONY_WARNING_COPY = `Action required before ${TELEPHONY_WARNING_DEADLINE}`;
 
+// Phase 5a — settings consolidation. The BUILD section drops "Models",
+// "Telephony", and "Developers" (now tabs under /settings). A new
+// top-level "Settings" link replaces those entry points; the Telephony-
+// missing-webhook warning rides along on the Settings link so operators
+// still see the warning dot without us reviving the dropped item.
 const NAV_SECTIONS: SidebarNavSection[] = [
   {
     items: [
@@ -96,17 +97,6 @@ const NAV_SECTIONS: SidebarNavSection[] = [
         icon: Megaphone,
       },
       {
-        title: "Models",
-        url: "/model-configurations",
-        icon: Brain,
-      },
-      {
-        title: "Telephony",
-        url: "/telephony-configurations",
-        icon: Phone,
-        showsTelephonyWarning: true,
-      },
-      {
         title: "Tools",
         url: "/tools",
         icon: Wrench,
@@ -121,11 +111,6 @@ const NAV_SECTIONS: SidebarNavSection[] = [
         url: "/recordings",
         icon: AudioLines,
       },
-      {
-        title: "Developers",
-        url: "/api-keys",
-        icon: Key,
-      },
     ],
   },
   {
@@ -133,13 +118,23 @@ const NAV_SECTIONS: SidebarNavSection[] = [
     items: [
       {
         title: "Agent Runs",
-        url: "/usage",
+        url: "/settings?tab=usage-billing",
         icon: TrendingUp,
       },
       {
         title: "Reports",
         url: "/reports",
         icon: FileText,
+      },
+    ],
+  },
+  {
+    items: [
+      {
+        title: "Settings",
+        url: "/settings",
+        icon: Settings,
+        showsTelephonyWarning: true,
       },
     ],
   },
@@ -368,10 +363,8 @@ export function AppSidebar() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => router.push("/settings")} className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Platform Settings
-                  </DropdownMenuItem>
+                  {/* Phase 5a: Platform Settings + Usage moved into the top-level
+                      Settings sidebar item (with /settings?tab=...). */}
                   <DropdownMenuItem onClick={() => logout()} className="cursor-pointer">
                     <LogOut className="mr-2 h-4 w-4" />
                     Sign out
@@ -413,14 +406,8 @@ export function AppSidebar() {
                     <Settings className="mr-2 h-4 w-4" />
                     Account settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push("/settings")} className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Platform Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push("/usage")} className="cursor-pointer">
-                    <CircleDollarSign className="mr-2 h-4 w-4" />
-                    Usage
-                  </DropdownMenuItem>
+                  {/* Phase 5a: Platform Settings + Usage moved into the top-level
+                      Settings sidebar item (with /settings?tab=...). */}
                   <DropdownMenuItem onClick={() => logout()} className="cursor-pointer">
                     <LogOut className="mr-2 h-4 w-4" />
                     Sign out

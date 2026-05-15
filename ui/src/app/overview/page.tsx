@@ -53,7 +53,7 @@ export default function OverviewPage() {
                         </CardHeader>
                         <CardContent>
                             <Button asChild variant="outline">
-                                <Link href="/model-configurations">
+                                <Link href="/settings?tab=models">
                                     Configure Models
                                 </Link>
                             </Button>

@@ -64,10 +64,10 @@ export async function getRedirectUrl(token: string, permissions: { id: string }[
     console.log('[getRedirectUrl] Admin permission check:', { hasAdminPermission });
 
   // If the user doesn't have admin permissions, redirect them to
-  // usage page
+  // the usage tab of the consolidated settings page.
   if (!hasAdminPermission) {
-    console.log('[getRedirectUrl] No admin permission, redirecting to /usage');
-    return "/usage";
+    console.log('[getRedirectUrl] No admin permission, redirecting to /settings?tab=usage-billing');
+    return "/settings?tab=usage-billing";
   }
 
   // Check if user has any workflows

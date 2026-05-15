@@ -32,7 +32,7 @@ export function MCPSection() {
           Connect an MCP-compatible AI assistant to this URL over Streamable
           HTTP. Requires an API key in the X-API-Key header.{" "}
           <Link
-            href="/api-keys"
+            href="/settings?tab=api-keys"
             target="_blank"
             className="text-primary underline hover:no-underline"
           >
