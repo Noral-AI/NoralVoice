@@ -7,8 +7,21 @@ import { NextRequest, NextResponse } from "next/server";
  *
  * Example usage (client side):
  *   /impersonate?refresh_token=<TOKEN>&redirect_path=/workflow/123
+ *
+ * This route is Stack-specific. Under the local (OSS) auth provider it
+ * has no useful effect — the stack-refresh cookie would be named
+ * `stack-refresh-undefined` and ignored. Phase 5c: return 501 with a
+ * clear message rather than silently no-op.
  */
 export async function GET(request: NextRequest) {
+    const stackProjectId = process.env.NEXT_PUBLIC_STACK_PROJECT_ID;
+    if (!stackProjectId) {
+        return new Response(
+            "Impersonation is not supported under local auth. Use the Stack provider.",
+            { status: 501, headers: { "Content-Type": "text/plain" } },
+        );
+    }
+
     const { searchParams } = new URL(request.url);
 
     const refreshToken = searchParams.get("refresh_token");
@@ -32,7 +45,7 @@ export async function GET(request: NextRequest) {
     // Store the refresh token cookie without an explicit domain so that it is
     // scoped to the current (sub-)domain. This avoids collisions between the
     // admin (superadmin.*) and the regular app (app.*) domains.
-    response.cookies.set(`stack-refresh-${process.env.NEXT_PUBLIC_STACK_PROJECT_ID}` as string, refreshToken, {
+    response.cookies.set(`stack-refresh-${stackProjectId}`, refreshToken, {
         path: "/",
         maxAge,
         secure: true,

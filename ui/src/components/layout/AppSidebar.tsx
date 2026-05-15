@@ -13,13 +13,16 @@ import {
   type LucideIcon,
   Megaphone,
   Settings,
+  ShieldCheck,
   TrendingUp,
   Workflow,
   Wrench,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+
+import { getAuthUserApiV1UserAuthUserGet } from "@/client/sdk.gen";
 
 import ThemeToggle from "@/components/ThemeSwitcher";
 import { Button } from "@/components/ui/button";
@@ -172,6 +175,31 @@ export function AppSidebar() {
 
   // Upstream release-check disabled in this fork; we manage releases internally.
   useLatestReleaseVersion(versionInfo?.ui, { enabled: false });
+
+  // Phase 5c: surface Superadmin in the user dropdown for superusers only.
+  // /superadmin is server-gated; this flag drives visibility only. We fetch
+  // the auth user separately because LocalUser/CurrentUser don't carry the
+  // flag and the server is the source of truth.
+  const [isSuperuser, setIsSuperuser] = useState(false);
+  useEffect(() => {
+    if (!user) {
+      setIsSuperuser(false);
+      return;
+    }
+    let cancelled = false;
+    getAuthUserApiV1UserAuthUserGet()
+      .then((res) => {
+        if (!cancelled) {
+          setIsSuperuser(Boolean(res.data?.is_superuser));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setIsSuperuser(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const isActive = (path: string) => pathname.startsWith(path);
 
@@ -365,6 +393,12 @@ export function AppSidebar() {
                   <DropdownMenuSeparator />
                   {/* Phase 5a: Platform Settings + Usage moved into the top-level
                       Settings sidebar item (with /settings?tab=...). */}
+                  {isSuperuser && (
+                    <DropdownMenuItem onClick={() => router.push("/superadmin")} className="cursor-pointer">
+                      <ShieldCheck className="mr-2 h-4 w-4" />
+                      Superadmin
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={() => logout()} className="cursor-pointer">
                     <LogOut className="mr-2 h-4 w-4" />
                     Sign out
@@ -408,6 +442,12 @@ export function AppSidebar() {
                   </DropdownMenuItem>
                   {/* Phase 5a: Platform Settings + Usage moved into the top-level
                       Settings sidebar item (with /settings?tab=...). */}
+                  {isSuperuser && (
+                    <DropdownMenuItem onClick={() => router.push("/superadmin")} className="cursor-pointer">
+                      <ShieldCheck className="mr-2 h-4 w-4" />
+                      Superadmin
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={() => logout()} className="cursor-pointer">
                     <LogOut className="mr-2 h-4 w-4" />
                     Sign out
