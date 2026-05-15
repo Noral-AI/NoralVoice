@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from dograh_sdk._generated_models import (
+from noralai_voice._generated_models import (
     CreateWorkflowRequest,
     CredentialResponse,
     DocumentListResponseSchema,

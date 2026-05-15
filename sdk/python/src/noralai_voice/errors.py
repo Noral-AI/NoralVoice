@@ -1,6 +1,6 @@
 """SDK-level exceptions.
 
-All errors raised from `dograh_sdk` are subclasses of `DograhSdkError` so
+All errors raised from `noralai_voice` are subclasses of `DograhSdkError` so
 calling code can catch them as one category.
 """
 
