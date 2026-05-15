@@ -1,51 +1,22 @@
-"use client";
+import { Suspense } from "react";
 
-
-import { MCPSection } from "@/components/MCPSection";
-import { TelemetrySection } from "@/components/TelemetrySection";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import SettingsTabs from "@/components/settings/SettingsTabs";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SettingsPage() {
   return (
-    <div className="flex justify-center py-12 px-4">
-      <div className="w-full max-w-2xl space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">Platform Settings</h1>
+    <div className="container mx-auto px-4 py-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold">Settings</h1>
           <p className="text-muted-foreground">
-            Manage your platform configuration and integrations.
+            Manage your account, organization, integrations, models, telephony, and
+            platform configuration.
           </p>
         </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>MCP Server</CardTitle>
-            <CardDescription>
-              Let AI agents access your NoralVoice workspace via the Model
-              Context Protocol.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <MCPSection />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Telemetry</CardTitle>
-            <CardDescription>
-              Configure Langfuse tracing for your voice agent calls.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <TelemetrySection />
-          </CardContent>
-        </Card>
+        <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+          <SettingsTabs />
+        </Suspense>
       </div>
     </div>
   );

@@ -28,6 +28,18 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // Phase 5a — settings consolidation. The list pages below were absorbed
+  // into the tabbed /settings page. Old paths 308-redirect to preserve
+  // bookmarks for one release; remove after the migration window.
+  async redirects() {
+    return [
+      { source: "/api-keys", destination: "/settings?tab=api-keys", permanent: true },
+      { source: "/integrations", destination: "/settings?tab=integrations", permanent: true },
+      { source: "/model-configurations", destination: "/settings?tab=models", permanent: true },
+      { source: "/telephony-configurations", destination: "/settings?tab=telephony", permanent: true },
+      { source: "/usage", destination: "/settings?tab=usage-billing", permanent: true },
+    ];
+  },
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
 };
