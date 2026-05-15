@@ -1,4 +1,4 @@
-"""Tests for the typed SDK (`dograh_sdk.typed`).
+"""Tests for the typed SDK (`noralai_voice.typed`).
 
 Covers:
 - Generated classes import cleanly and declare the correct spec name
@@ -10,9 +10,9 @@ Covers:
 from __future__ import annotations
 
 import pytest
-from dograh_sdk import Workflow
-from dograh_sdk._generated_models import NodeSpec
-from dograh_sdk.typed import (
+from noralai_voice import Workflow
+from noralai_voice._generated_models import NodeSpec
+from noralai_voice.typed import (
     AgentNode,
     EndCall,
     GlobalNode,

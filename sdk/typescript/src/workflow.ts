@@ -80,7 +80,7 @@ export class Workflow {
 
     /**
      * Typed variant of `add()` — takes a typed node object from
-     * `@dograh/sdk/typed` (or its discriminated-union form) instead of
+     * `@noralai/voice-sdk/typed` (or its discriminated-union form) instead of
      * raw kwargs.
      *
      * Equivalent to:

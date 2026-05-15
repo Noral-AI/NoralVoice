@@ -71,12 +71,12 @@ def _extract_trigger_paths(workflow_definition: dict) -> list[str]:
 async def create_workflow(code: str) -> dict[str, Any]:
     """Parse SDK TypeScript and create a new published workflow.
 
-    `code` is TypeScript source using `@noralvoice/sdk`. The workflow name
+    `code` is TypeScript source using `@noralai/voice-sdk`. The workflow name
     comes from `new Workflow({ name: "..." })` — it is required.
 
     Example code:
-        import { Workflow } from "@noralvoice/sdk";
-        import { startCall, endCall } from "@noralvoice/sdk/typed";
+        import { Workflow } from "@noralai/voice-sdk";
+        import { startCall, endCall } from "@noralai/voice-sdk/typed";
 
         const wf = new Workflow({ name: "lead_qualification" });
         const greeting = wf.addTyped(startCall({ name: "Greeting", prompt: "Hi!" }));

@@ -1,6 +1,6 @@
 """GENERATED — do not edit by hand.
 
-Regenerate with `python -m dograh_sdk.codegen` against the target
+Regenerate with `python -m noralai_voice.codegen` against the target
 Dograh backend. Source of truth: each node's NodeSpec in the backend's
 `api/services/workflow/node_specs/` directory.
 """
@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, ClassVar, Literal, Optional
 
-from dograh_sdk.typed._base import TypedNode
+from noralai_voice.typed._base import TypedNode
 
 
 @dataclass(kw_only=True)

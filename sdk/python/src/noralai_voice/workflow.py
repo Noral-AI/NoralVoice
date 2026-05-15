@@ -109,7 +109,7 @@ class Workflow:
         position: tuple[float, float] | None = None,
     ) -> NodeRef:
         """Typed variant of `add()` — takes a generated dataclass from
-        `dograh_sdk.typed` instead of string+kwargs.
+        `noralai_voice.typed` instead of string+kwargs.
 
         Equivalent to:
             wf.add(type=node.type, position=..., **node.to_dict())

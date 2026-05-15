@@ -5,7 +5,7 @@ start and validates every `Workflow.add()` call against it. LLMs don't
 need to import per-node-type classes — the `type` argument is a string
 keyed against the fetched spec catalog.
 
-    from dograh_sdk import DograhClient, Workflow
+    from noralai_voice import DograhClient, Workflow
 
     with DograhClient(base_url="http://localhost:8000", api_key=...) as client:
         wf = Workflow(client=client, name="loan_qualification")
