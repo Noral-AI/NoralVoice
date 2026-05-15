@@ -10,6 +10,11 @@ import { getAuthProvider } from '@/lib/auth/config';
 
 const OSS_TOKEN_COOKIE = 'noralvoice_auth_token';
 const OSS_USER_COOKIE = 'noralvoice_auth_user';
+// PHASE-5 COOKIE-MIGRATION — fall back to the legacy cookies so a
+// stale browser session keeps working through the dual-write window.
+// Remove in a follow-up.
+const LEGACY_OSS_TOKEN_COOKIE = 'dograh_auth_token';
+const LEGACY_OSS_USER_COOKIE = 'dograh_auth_user';
 
 export async function GET() {
   const authProvider = await getAuthProvider();
@@ -20,8 +25,12 @@ export async function GET() {
   }
 
   const cookieStore = await cookies();
-  const token = cookieStore.get(OSS_TOKEN_COOKIE)?.value;
-  const user = cookieStore.get(OSS_USER_COOKIE)?.value;
+  const token =
+    cookieStore.get(OSS_TOKEN_COOKIE)?.value ??
+    cookieStore.get(LEGACY_OSS_TOKEN_COOKIE)?.value;
+  const user =
+    cookieStore.get(OSS_USER_COOKIE)?.value ??
+    cookieStore.get(LEGACY_OSS_USER_COOKIE)?.value;
 
   // If no token exists, return 401 (user needs to sign up or log in)
   if (!token) {

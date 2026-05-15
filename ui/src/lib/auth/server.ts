@@ -14,6 +14,11 @@ import type { LocalUser } from './types';
 let stackServerApp: StackServerApp<boolean, string> | null = null;
 const OSS_TOKEN_COOKIE = 'noralvoice_auth_token';
 const OSS_USER_COOKIE = 'noralvoice_auth_user';
+// PHASE-5 COOKIE-MIGRATION — fall back to the legacy cookies so a
+// stale browser session keeps working through the dual-write window.
+// Remove in a follow-up after one release.
+const LEGACY_OSS_TOKEN_COOKIE = 'dograh_auth_token';
+const LEGACY_OSS_USER_COOKIE = 'dograh_auth_user';
 
 // Lazy load and cache the stack server app
 export async function getStackServerApp(): Promise<StackServerApp<boolean, string> | null> {
@@ -75,7 +80,11 @@ export async function getServerAuthProvider(): Promise<string> {
  */
 export async function getOSSToken(): Promise<string | null> {
   const cookieStore = await cookies();
-  return cookieStore.get(OSS_TOKEN_COOKIE)?.value || null;
+  return (
+    cookieStore.get(OSS_TOKEN_COOKIE)?.value ||
+    cookieStore.get(LEGACY_OSS_TOKEN_COOKIE)?.value ||
+    null
+  );
 }
 
 /**
@@ -83,7 +92,9 @@ export async function getOSSToken(): Promise<string | null> {
  */
 export async function getOSSUser(): Promise<LocalUser | null> {
   const cookieStore = await cookies();
-  const userCookie = cookieStore.get(OSS_USER_COOKIE)?.value;
+  const userCookie =
+    cookieStore.get(OSS_USER_COOKIE)?.value ??
+    cookieStore.get(LEGACY_OSS_USER_COOKIE)?.value;
 
   if (userCookie) {
     try {
@@ -103,7 +114,9 @@ export async function getOSSUser(): Promise<LocalUser | null> {
   }
 
   // If no user cookie, but we have a token, create user from token
-  const token = cookieStore.get(OSS_TOKEN_COOKIE)?.value;
+  const token =
+    cookieStore.get(OSS_TOKEN_COOKIE)?.value ??
+    cookieStore.get(LEGACY_OSS_TOKEN_COOKIE)?.value;
   if (token) {
     const user: LocalUser = {
       id: token,
