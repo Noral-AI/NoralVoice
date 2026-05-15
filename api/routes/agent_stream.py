@@ -5,27 +5,41 @@ an agent run by passing everything inline in the query string — including
 provider credentials. The standard ``/telephony/ws/...`` path requires a
 ``TelephonyConfigurationModel`` row stored in the org; this one does not.
 
-Auth: the workflow UUID itself acts as the identifier — no API key.
+Auth: requires ``?api_key=<value>`` on the WS upgrade. The api_key is
+validated via the same path as REST/X-API-Key auth, and the key's
+organization must match the workflow's organization. The workflow UUID
+alone is **not** sufficient — UUIDs leak in exported React-Flow JSON.
+
 Routing: when ``?provider=<registered>`` matches a telephony provider, we
 dispatch to that provider's ``handle_external_websocket``. The raw-audio
 branch (no provider) is reserved for a future protocol decision and
 currently rejects with 1011.
+
+Close codes specific to this endpoint:
+  * 4401 — missing or invalid api_key, or api_key not authorized for the
+    requested workflow (analogous to HTTP 401).
 """
 
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, WebSocket
+from fastapi import APIRouter, HTTPException, WebSocket
 from loguru import logger
 from pipecat.utils.run_context import set_current_org_id, set_current_run_id
 from starlette.websockets import WebSocketDisconnect
 
 from api.db import db_client
 from api.enums import CallType, WorkflowRunState
+from api.services.auth.depends import _handle_api_key_auth
 from api.services.quota_service import check_model_quota_by_user_id
 from api.services.telephony import registry as telephony_registry
 
 router = APIRouter(prefix="/agent-stream")
+
+# WebSocket application close code for unauthorized agent-stream
+# connections. RFC 6455 reserves 4000-4999 for application use; 4401 is
+# chosen to mirror HTTP 401.
+_WS_UNAUTHORIZED = 4401
 
 
 @router.websocket("/{workflow_uuid}")
@@ -36,6 +50,8 @@ async def agent_stream_websocket(
     """Generic agent-stream WebSocket.
 
     Query params:
+        api_key: required. Organization-scoped API key. The key's
+            organization must match the workflow's organization.
         provider: registered telephony provider name (e.g. ``cloudonix``)
         from / to / callId: call metadata persisted on the workflow run
         ...: provider-specific credentials/identifiers (e.g. ``session``,
@@ -45,6 +61,26 @@ async def agent_stream_websocket(
     """
     await websocket.accept()
     params = dict(websocket.query_params)
+
+    api_key: Optional[str] = params.get("api_key")
+    if not api_key:
+        logger.warning(
+            f"agent-stream missing api_key (workflow_uuid={workflow_uuid})"
+        )
+        await websocket.close(
+            code=_WS_UNAUTHORIZED, reason="Missing api_key query parameter"
+        )
+        return
+
+    try:
+        authed_user = await _handle_api_key_auth(api_key)
+    except HTTPException as e:
+        logger.warning(
+            f"agent-stream invalid api_key for workflow {workflow_uuid}: {e.detail}"
+        )
+        await websocket.close(code=_WS_UNAUTHORIZED, reason=e.detail)
+        return
+
     provider_name: Optional[str] = params.get("provider")
 
     if not provider_name:
@@ -65,6 +101,21 @@ async def agent_stream_websocket(
     if not workflow:
         logger.warning(f"agent-stream workflow {workflow_uuid} not found")
         await websocket.close(code=1008, reason="Workflow not found")
+        return
+
+    # Org isolation: the api_key's organization must match the workflow's.
+    # Without this, any valid key could drive any workflow as long as the
+    # UUID is known — defeating the auth gate's purpose.
+    if workflow.organization_id != authed_user.selected_organization_id:
+        logger.warning(
+            f"agent-stream api_key org={authed_user.selected_organization_id} "
+            f"does not match workflow org={workflow.organization_id} "
+            f"(workflow_uuid={workflow_uuid})"
+        )
+        await websocket.close(
+            code=_WS_UNAUTHORIZED,
+            reason="API key not authorized for this workflow",
+        )
         return
 
     quota_result = await check_model_quota_by_user_id(
