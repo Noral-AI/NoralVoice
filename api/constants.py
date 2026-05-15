@@ -1,9 +1,43 @@
 import os
+from dataclasses import dataclass
 from pathlib import Path
 
 from api.enums import Environment
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", Environment.LOCAL.value)
+
+
+# Brand-tokens module. Mirror of ui/src/lib/brand.ts. Single source of truth
+# for the strings that vary per deploy (white-label, fork, parent-brand
+# swap). Read from environment at module load with safe defaults for
+# NoralVoice.
+#
+# Phase 0 of the consolidation only *adds* this namespace — no callsites
+# are changed here. Phase 5 (brand purge) is where every hardcoded
+# "Dograh" literal gets replaced.
+@dataclass(frozen=True)
+class Brand:
+    name: str
+    product_line: str
+    parent_brand: str
+    widget_global_name: str
+    cookie_prefix: str
+    docs_url: str
+    domain: str
+    support_email: str
+
+
+BRAND = Brand(
+    name=os.getenv("BRAND_NAME", "NoralVoice"),
+    product_line=os.getenv("BRAND_PRODUCT_LINE", "NoralVoice"),
+    parent_brand=os.getenv("PARENT_BRAND", "Noral AI"),
+    widget_global_name=os.getenv("WIDGET_GLOBAL", "NoralVoiceWidget"),
+    cookie_prefix=os.getenv("COOKIE_PREFIX", "noralvoice"),
+    docs_url=os.getenv("DOCS_URL", "https://docs.noral.ai/voice"),
+    domain=os.getenv("BRAND_DOMAIN", "voice.noral.ai"),
+    support_email=os.getenv("SUPPORT_EMAIL", "support@noral.ai"),
+)
+
 # Absolute path to the project root directory (i.e. the directory containing
 # the top-level api/ package). Having a single canonical location helps
 # when constructing file-system paths elsewhere in the codebase.
@@ -24,6 +58,19 @@ UI_APP_URL = os.getenv("UI_APP_URL", "http://localhost:3010")
 
 DATABASE_URL = os.environ["DATABASE_URL"]
 REDIS_URL = os.environ["REDIS_URL"]
+
+# CORS allow-list. Comma-separated origins, e.g.
+# "https://voice.noral.ai,https://agent.noral.ai". Browsers reject the
+# previous `allow_origins=["*"] + allow_credentials=True` combo, so this
+# must be an explicit list in every environment. Dev default covers the
+# UI (3000) and direct API access (8000). Override via env in prod.
+_cors_origins_raw = os.getenv(
+    "CORS_ALLOWED_ORIGINS",
+    "http://localhost:3000,http://localhost:8000",
+)
+CORS_ALLOWED_ORIGINS: list[str] = [
+    origin.strip() for origin in _cors_origins_raw.split(",") if origin.strip()
+]
 
 DEPLOYMENT_MODE = os.getenv("DEPLOYMENT_MODE", "oss")
 AUTH_PROVIDER = os.getenv("AUTH_PROVIDER", "local")

@@ -26,7 +26,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
-from api.constants import REDIS_URL
+from api.constants import CORS_ALLOWED_ORIGINS, REDIS_URL
 from api.mcp_server import mcp
 from api.routes.main import router as main_router
 from api.services.pipecat.tracing_config import (
@@ -83,13 +83,15 @@ app = FastAPI(
 )
 
 
-# Configure CORS
+# Configure CORS. Explicit allow-list — wildcards combined with
+# `allow_credentials=True` are rejected by browsers and unsafe. The
+# allow-list is sourced from CORS_ALLOWED_ORIGINS (see api.constants).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=CORS_ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 api_router = APIRouter()
