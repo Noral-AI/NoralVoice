@@ -6,6 +6,7 @@ from api.routes.agent_stream import router as agent_stream_router
 from api.routes.auth import router as auth_router
 from api.routes.campaign import router as campaign_router
 from api.routes.credentials import router as credentials_router
+from api.routes.embed import router as embed_router
 from api.routes.integration import router as integration_router
 from api.routes.knowledge_base import router as knowledge_base_router
 from api.routes.looptalk import router as looptalk_router
@@ -50,6 +51,7 @@ router.include_router(reports_router)
 router.include_router(webrtc_signaling_router)
 router.include_router(turn_credentials_router)
 router.include_router(public_embed_router)
+router.include_router(embed_router)
 router.include_router(public_agent_router)
 router.include_router(public_download_router)
 router.include_router(workflow_embed_router)
