@@ -3,7 +3,7 @@
 // Reads NodeSpecs from the live backend or a local JSON file and emits
 // one `<kebab-case>.ts` per node type into `src/typed/` — each with a
 // discriminated-union interface + a factory. The generated files are
-// committed so `npm install @dograh/sdk` ships typed classes without
+// committed so `npm install @noralai/voice-sdk` ships typed classes without
 // requiring a regen step.
 //
 // Run via `npm run codegen` or:

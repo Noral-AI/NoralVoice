@@ -1,4 +1,4 @@
-// Unit tests for @dograh/sdk. Uses Node's built-in `node:test` runner and
+// Unit tests for @noralai/voice-sdk. Uses Node's built-in `node:test` runner and
 // an in-memory spec stub — no HTTP, no backend dependency. Mirrors the
 // Python SDK tests in api/tests/test_dograh_sdk.py.
 //

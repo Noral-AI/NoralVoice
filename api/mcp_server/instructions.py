@@ -12,7 +12,7 @@ mistake the system has seen at least once.
 """
 
 NORALVOICE_MCP_INSTRUCTIONS = """\
-You build and edit NoralVoice voice-AI workflows by emitting TypeScript that uses the `@noralvoice/sdk` package. Workflows are stored as JSON; this server projects them to TypeScript for editing and parses them back on save.
+You build and edit NoralVoice voice-AI workflows by emitting TypeScript that uses the `@noralai/voice-sdk` package. Workflows are stored as JSON; this server projects them to TypeScript for editing and parses them back on save.
 
 ## Call order
 
