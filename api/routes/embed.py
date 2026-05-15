@@ -38,6 +38,12 @@ router = APIRouter(prefix="/embed", tags=["embed"])
 # These are the brand-prefixed cookie names from Phase 0 brand tokens.
 COOKIE_TOKEN = "noralvoice_auth_token"
 COOKIE_USER = "noralvoice_auth_user"
+# PHASE-5 COOKIE-MIGRATION — also write the legacy `dograh_*` cookies
+# so a session embedded via the legacy iframe path keeps working
+# through the dual-write window. Reader paths fall back to these.
+# Remove in a follow-up after one release.
+LEGACY_COOKIE_TOKEN = "dograh_auth_token"
+LEGACY_COOKIE_USER = "dograh_auth_user"
 
 # Exchange-token TTL clamps. The default is intentionally tight: the
 # token is used immediately on iframe load; longer windows just widen
@@ -235,14 +241,17 @@ async def embed_login(
 
     redirect_target = urljoin(UI_APP_URL.rstrip("/") + "/", path.lstrip("/"))
     response = RedirectResponse(url=redirect_target, status_code=302)
+    common_cookie_kwargs = {
+        "secure": secure,
+        "samesite": samesite,
+        "path": "/",
+        "max_age": 60 * 60 * 24 * 7,  # mirror the auth flow's 7-day window
+    }
     response.set_cookie(
         key=COOKIE_TOKEN,
         value=jwt_token,
         httponly=True,
-        secure=secure,
-        samesite=samesite,
-        path="/",
-        max_age=60 * 60 * 24 * 7,  # mirror the auth flow's 7-day window
+        **common_cookie_kwargs,
     )
     response.set_cookie(
         key=COOKIE_USER,
@@ -251,10 +260,20 @@ async def embed_login(
         # name without an extra /auth/me round-trip; the token cookie
         # stays HttpOnly so JS can't ship it elsewhere.
         httponly=False,
-        secure=secure,
-        samesite=samesite,
-        path="/",
-        max_age=60 * 60 * 24 * 7,
+        **common_cookie_kwargs,
+    )
+    # PHASE-5 COOKIE-MIGRATION — dual-write the legacy names.
+    response.set_cookie(
+        key=LEGACY_COOKIE_TOKEN,
+        value=jwt_token,
+        httponly=True,
+        **common_cookie_kwargs,
+    )
+    response.set_cookie(
+        key=LEGACY_COOKIE_USER,
+        value=json.dumps(user_payload),
+        httponly=False,
+        **common_cookie_kwargs,
     )
     logger.info(
         f"Embed-login redirected target_user_id={target_user.id} to {redirect_target}"
