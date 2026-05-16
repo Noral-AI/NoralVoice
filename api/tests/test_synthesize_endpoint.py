@@ -160,6 +160,7 @@ def test_synthesize_happy_path_returns_audio_url(client: TestClient):
         expires_at=datetime.now(UTC) + timedelta(minutes=5),
     )
 
+
     with patch(
         "api.routes.embed.db_client.get_embed_token_by_token",
         new=AsyncMock(return_value=_fake_embed_token()),
@@ -265,6 +266,7 @@ def test_synthesize_allows_wildcard_domain(client: TestClient):
         expires_at=datetime.now(UTC) + timedelta(minutes=5),
     )
 
+
     with patch(
         "api.routes.embed.db_client.get_embed_token_by_token",
         new=AsyncMock(return_value=_fake_embed_token(allowed_domains=["*"])),
@@ -282,6 +284,109 @@ def test_synthesize_allows_wildcard_domain(client: TestClient):
             "/api/v1/embed/synthesize",
             json={"token": "emb_test", "text": "Hello."},
             headers={"Origin": "https://anywhere.example.com"},
+        )
+
+    assert resp.status_code == 200
+
+
+def test_synthesize_apikey_auth_happy_path(client: TestClient):
+    """X-API-Key header path: skip embed_token validation + domain check."""
+    from api.services.audio.synth_storage import SynthUploadResult
+    from api.services.pipecat.tts_one_shot import SynthesisResult
+
+    fake_user = SimpleNamespace(id=11, selected_organization_id=7)
+    fake_synth = SynthesisResult(
+        audio_bytes=b"<wav>",
+        content_type="audio/wav",
+        sample_rate_hz=16000,
+        duration_seconds=0.4,
+        provider="elevenlabs",
+        char_count=6,
+    )
+    fake_upload = SynthUploadResult(
+        audio_url="https://signed/audio.wav",
+        storage_path="audio/synthesized/org-7/x.wav",
+        content_type="audio/wav",
+        expires_at=datetime.now(UTC) + timedelta(minutes=5),
+    )
+
+    with patch(
+        "api.routes.embed._handle_api_key_auth",
+        new=AsyncMock(return_value=fake_user),
+    ), patch(
+        "api.routes.embed.db_client.get_user_configurations",
+        new=AsyncMock(return_value=_fake_user_config()),
+    ), patch(
+        "api.routes.embed.tts_one_shot.synthesize",
+        new=AsyncMock(return_value=fake_synth),
+    ), patch(
+        "api.routes.embed.synth_storage.upload_synth_audio",
+        new=AsyncMock(return_value=fake_upload),
+    ) as upload_mock:
+        resp = client.post(
+            "/api/v1/embed/synthesize",
+            json={"text": "Hello."},
+            headers={"X-API-Key": "nvk_test_apiKey"},
+        )
+
+    assert resp.status_code == 200, resp.text
+    # path_namespace must be derived from the org_id under apiKey auth.
+    upload_kwargs = upload_mock.call_args.kwargs
+    assert upload_kwargs["path_namespace"] == "org-7"
+
+
+def test_synthesize_rejects_request_with_no_auth(client: TestClient):
+    """Neither X-API-Key nor token → 401."""
+    resp = client.post(
+        "/api/v1/embed/synthesize",
+        json={"text": "Hello."},
+    )
+    assert resp.status_code == 401
+
+
+def test_synthesize_apikey_skips_origin_check(client: TestClient):
+    """apiKey-authed calls don't enforce allowed_domains. Even a bad
+    Origin header is allowed because apiKey holders are trusted servers,
+    not embed widgets in random sites."""
+    from api.services.audio.synth_storage import SynthUploadResult
+    from api.services.pipecat.tts_one_shot import SynthesisResult
+
+    fake_user = SimpleNamespace(id=11, selected_organization_id=7)
+    fake_synth = SynthesisResult(
+        audio_bytes=b"<wav>",
+        content_type="audio/wav",
+        sample_rate_hz=16000,
+        duration_seconds=0.4,
+        provider="elevenlabs",
+        char_count=6,
+    )
+    fake_upload = SynthUploadResult(
+        audio_url="https://signed/audio.wav",
+        storage_path="audio/synthesized/org-7/x.wav",
+        content_type="audio/wav",
+        expires_at=datetime.now(UTC) + timedelta(minutes=5),
+    )
+
+    with patch(
+        "api.routes.embed._handle_api_key_auth",
+        new=AsyncMock(return_value=fake_user),
+    ), patch(
+        "api.routes.embed.db_client.get_user_configurations",
+        new=AsyncMock(return_value=_fake_user_config()),
+    ), patch(
+        "api.routes.embed.tts_one_shot.synthesize",
+        new=AsyncMock(return_value=fake_synth),
+    ), patch(
+        "api.routes.embed.synth_storage.upload_synth_audio",
+        new=AsyncMock(return_value=fake_upload),
+    ):
+        resp = client.post(
+            "/api/v1/embed/synthesize",
+            json={"text": "Hello."},
+            headers={
+                "X-API-Key": "nvk_test_apiKey",
+                "Origin": "https://evil.example.com",
+            },
         )
 
     assert resp.status_code == 200
@@ -366,6 +471,7 @@ def test_synthesize_allows_clean_text_through_exfil_scan(client: TestClient):
         content_type="audio/wav",
         expires_at=datetime.now(UTC) + timedelta(minutes=5),
     )
+
 
     with patch(
         "api.routes.embed.db_client.get_embed_token_by_token",
@@ -468,9 +574,18 @@ def test_extension_for_content_type_unknown_raises():
         _extension_for_content_type("audio/ogg")
 
 
-def test_build_storage_path_format():
+def test_build_storage_path_token_namespace():
     from api.services.audio.synth_storage import _build_storage_path
 
-    path = _build_storage_path(token_id=42, extension="wav")
-    assert path.startswith("audio/synthesized/42/")
+    path = _build_storage_path(path_namespace="token-42", extension="wav")
+    assert path.startswith("audio/synthesized/token-42/")
     assert path.endswith(".wav")
+
+
+def test_build_storage_path_org_namespace():
+    """apiKey-authed calls use ``org-<id>`` instead of ``token-<id>``."""
+    from api.services.audio.synth_storage import _build_storage_path
+
+    path = _build_storage_path(path_namespace="org-7", extension="mp3")
+    assert path.startswith("audio/synthesized/org-7/")
+    assert path.endswith(".mp3")

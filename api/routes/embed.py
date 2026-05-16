@@ -18,7 +18,7 @@ from urllib.parse import quote, urljoin
 
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from fastapi.responses import RedirectResponse
 from loguru import logger
 from pydantic import BaseModel, Field
@@ -32,7 +32,7 @@ from api.enums import Environment
 from api.routes.public_embed import validate_origin
 from api.services.audio import synth_storage
 from api.services.audio.exfiltration_guard import scan_for_secrets
-from api.services.auth.depends import get_user
+from api.services.auth.depends import _handle_api_key_auth, get_user
 from api.services.pipecat import tts_one_shot
 from api.utils.auth import create_jwt_token
 
@@ -343,16 +343,22 @@ class SynthesizeVoiceOverride(BaseModel):
 
 
 class SynthesizeRequest(BaseModel):
-    """POST /embed/synthesize body."""
+    """POST /embed/synthesize body.
 
-    token: str = Field(
-        ...,
+    Authentication: pass EITHER an ``X-API-Key`` header (canonical
+    NoralOS↔NoralVoice server-to-server credential) OR the ``token``
+    field (embed_token for browser embed widgets). If both are present,
+    ``X-API-Key`` wins and ``token`` is ignored.
+    """
+
+    token: str | None = Field(
+        default=None,
         description=(
             "embed_token previously minted via the operator dashboard or "
             "POST /embed/exchange-token. Validated against is_active, "
-            "expires_at, and allowed_domains (vs request Origin)."
+            "expires_at, and allowed_domains (vs request Origin). Optional "
+            "when X-API-Key header is supplied."
         ),
-        min_length=1,
         max_length=512,
     )
     text: str = Field(
@@ -403,7 +409,7 @@ class SynthesizeResponse(BaseModel):
     "/synthesize",
     response_model=SynthesizeResponse,
     responses={
-        401: {"description": "Invalid or expired embed token."},
+        401: {"description": "Invalid or expired credential (X-API-Key or embed_token)."},
         403: {"description": "Request origin not in token's allowed_domains."},
         422: {"description": "Invalid voice_override, text_too_long, or text matched exfiltration scan."},
         429: {"description": "Per-token rate limit exceeded."},
@@ -414,37 +420,65 @@ class SynthesizeResponse(BaseModel):
 async def synthesize(
     request: SynthesizeRequest,
     http_request: Request,
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
 ) -> SynthesizeResponse:
     """One-shot TTS synthesis via NoralVoice's 9-provider catalog.
 
+    Dual auth: ``X-API-Key`` header (server-to-server canonical credential)
+    OR the ``token`` body field (embed_token for browser widgets). API
+    key wins if both are supplied; domain check is skipped under apiKey
+    auth (apiKeys aren't domain-scoped — they're trusted-server credentials).
+
     See ``docs/design/phase-6-nv-tts-synthesize.md`` for the full design.
     """
-    # 1. Validate embed token.
-    embed_token = await db_client.get_embed_token_by_token(request.token)
-    if (
-        embed_token is None
-        or not embed_token.is_active
-        or (embed_token.expires_at is not None and embed_token.expires_at < datetime.now(UTC))
-    ):
-        # Collapse {missing, inactive, expired} into a single 401 so the
-        # endpoint isn't a token-state oracle.
-        raise HTTPException(status_code=401, detail="invalid_embed_token")
+    # 1. Authenticate. apiKey path skips embed_token + domain checks.
+    user_id_for_config: int
+    path_namespace: str
+    auth_method: str
+    if x_api_key:
+        try:
+            user = await _handle_api_key_auth(x_api_key)
+        except HTTPException:
+            # Re-raise as-is; helper returns the right 401.
+            raise
+        user_id_for_config = user.id
+        path_namespace = f"org-{user.selected_organization_id}"
+        auth_method = "apiKey"
+    else:
+        if not request.token:
+            raise HTTPException(
+                status_code=401,
+                detail="Authentication required: provide X-API-Key header or token field",
+            )
+        embed_token = await db_client.get_embed_token_by_token(request.token)
+        if (
+            embed_token is None
+            or not embed_token.is_active
+            or (embed_token.expires_at is not None and embed_token.expires_at < datetime.now(UTC))
+        ):
+            # Collapse {missing, inactive, expired} into a single 401 so the
+            # endpoint isn't a token-state oracle.
+            raise HTTPException(status_code=401, detail="invalid_embed_token")
 
-    # 2. Domain-check the request origin against the token's allowlist.
-    origin = http_request.headers.get("origin") or http_request.headers.get("referer") or ""
-    if not validate_origin(origin, embed_token.allowed_domains or []):
-        logger.warning(
-            f"Synthesize: origin {origin!r} not in allowed_domains "
-            f"{embed_token.allowed_domains} for token_id={embed_token.id}"
-        )
-        raise HTTPException(status_code=403, detail="origin_not_allowed")
+        # 2. Domain-check the request origin against the token's allowlist.
+        origin = http_request.headers.get("origin") or http_request.headers.get("referer") or ""
+        if not validate_origin(origin, embed_token.allowed_domains or []):
+            logger.warning(
+                f"Synthesize: origin {origin!r} not in allowed_domains "
+                f"{embed_token.allowed_domains} for token_id={embed_token.id}"
+            )
+            raise HTTPException(status_code=403, detail="origin_not_allowed")
 
-    # 3. Resolve token → user → user_configurations.tts.
-    user_config = await db_client.get_user_configurations(embed_token.created_by)
+        user_id_for_config = embed_token.created_by
+        path_namespace = f"token-{embed_token.id}"
+        auth_method = "embed_token"
+
+    # 3. Resolve user → user_configurations.tts.
+    user_config = await db_client.get_user_configurations(user_id_for_config)
     if user_config.tts is None:
         raise HTTPException(
             status_code=500,
-            detail="synthesis_failed: token owner has no TTS configuration",
+            detail="synthesis_failed: caller has no TTS configuration",
         )
 
     # 4. Overlay voice_override (Pydantic already rejected partials).
@@ -478,8 +512,8 @@ async def synthesize(
     if secret_matches:
         match_types = sorted({m.type for m in secret_matches})
         logger.warning(
-            f"Synthesize: text_blocked_exfiltration token_id={embed_token.id} "
-            f"types={match_types} count={len(secret_matches)}"
+            f"Synthesize: text_blocked_exfiltration auth={auth_method} "
+            f"namespace={path_namespace} types={match_types} count={len(secret_matches)}"
         )
         raise HTTPException(
             status_code=422,
@@ -504,10 +538,10 @@ async def synthesize(
         upload_result = await synth_storage.upload_synth_audio(
             synth_result.audio_bytes,
             synth_result.content_type,
-            token_id=embed_token.id,
+            path_namespace=path_namespace,
         )
     except synth_storage.SynthStorageError as exc:
-        logger.warning(f"Synthesize: storage error: {exc}")
+        logger.warning(f"Synthesize: storage error (auth={auth_method}): {exc}")
         raise HTTPException(status_code=502, detail="storage_failed")
 
     return SynthesizeResponse(

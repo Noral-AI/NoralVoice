@@ -86,7 +86,7 @@ async def upload_synth_audio(
     audio_bytes: bytes,
     content_type: str,
     *,
-    token_id: int,
+    path_namespace: str,
     extension: Optional[str] = None,
 ) -> SynthUploadResult:
     """Upload one synth audio output and return a pre-signed GET URL.
@@ -95,9 +95,11 @@ async def upload_synth_audio(
         audio_bytes: Raw audio bytes from :mod:`tts_one_shot`.
         content_type: HTTP content type to set on the stored object
             (``audio/mpeg`` or ``audio/wav``).
-        token_id: Integer PK of the embed_token. Used for path layout
-            + future per-token janitor cleanup. We deliberately do NOT
-            use the token secret in the path.
+        path_namespace: Short identifier used as the path prefix
+            (e.g. ``"token-42"`` for embed_token callers or
+            ``"org-7"`` for apiKey-authed callers). Used for path
+            layout + future per-caller janitor cleanup. We deliberately
+            do NOT use any secret in the path.
         extension: File extension matching the content type. Inferred
             from ``content_type`` if omitted.
 
@@ -111,7 +113,7 @@ async def upload_synth_audio(
         )
 
     ext = extension or _extension_for_content_type(content_type)
-    storage_path = _build_storage_path(token_id, ext)
+    storage_path = _build_storage_path(path_namespace, ext)
 
     upload_ok = await storage_fs.acreate_file(storage_path, _AsyncBytesReader(audio_bytes))
     if not upload_ok:
@@ -119,7 +121,7 @@ async def upload_synth_audio(
             f"synth_storage: upload to {storage_path} failed via {type(storage_fs).__name__}"
         )
         raise SynthStorageError(
-            f"Storage backend rejected synth upload (token_id={token_id})"
+            f"Storage backend rejected synth upload (namespace={path_namespace})"
         )
 
     # ``force_inline=True`` makes the browser play the audio in-page
@@ -159,10 +161,10 @@ def _extension_for_content_type(content_type: str) -> str:
     )
 
 
-def _build_storage_path(token_id: int, extension: str) -> str:
+def _build_storage_path(path_namespace: str, extension: str) -> str:
     """Return the bucket-relative storage path for a new synth output.
 
     Pure-function helper; testable in isolation. UUID4 for uniqueness;
-    token_id for namespacing per embed token.
+    ``path_namespace`` for grouping (per embed_token id or per org id).
     """
-    return f"{SYNTH_AUDIO_PREFIX}/{token_id}/{uuid.uuid4()}.{extension}"
+    return f"{SYNTH_AUDIO_PREFIX}/{path_namespace}/{uuid.uuid4()}.{extension}"
