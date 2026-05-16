@@ -279,3 +279,161 @@ async def embed_login(
         f"Embed-login redirected target_user_id={target_user.id} to {redirect_target}"
     )
     return response
+
+
+# ---------------------------------------------------------------------------
+# Phase 6 — POST /embed/synthesize (WIP skeleton)
+#
+# Public TTS-as-an-HTTP-endpoint, embed-token authenticated. Designed for
+# NoralOS Conference Room sessions that need NV's 9-provider TTS catalog
+# without spinning up a full workflow_run.
+#
+# This is a SKELETON for design review. The handler currently returns
+# ``501 Not Implemented`` — full implementation lands in a follow-up PR
+# against this same branch. See:
+#
+#     docs/design/phase-6-nv-tts-synthesize.md
+#
+# Pairs with NoralOS PR-A (`feat/phase-6a-conf-room-nv-tts`) which depends
+# on this endpoint being live before its Conference Room dual-path can flip
+# the flag to "new" in production.
+# ---------------------------------------------------------------------------
+
+
+# Hard cap on synth text length. Matches voice-cascade's
+# SPOKEN_RESPONSE_CAP_CHARS; anything longer is almost certainly a bug
+# (the calling agent forgot to truncate) and would be expensive to
+# synthesize.
+SYNTHESIZE_TEXT_MAX_CHARS = 4000
+
+
+class SynthesizeVoiceOverride(BaseModel):
+    """Optional per-call voice override. All three fields required when present.
+
+    If omitted from the request body, the synth uses the embed_token
+    owner's stored ``user_configurations.tts`` settings.
+    """
+
+    provider: str = Field(
+        ...,
+        description=(
+            "TTS provider id matching NoralVoice's catalog "
+            "(elevenlabs | cartesia | deepgram | openai | sarvam | rime | "
+            "dograh | speaches | camb)."
+        ),
+        min_length=1,
+        max_length=32,
+    )
+    voice_id: str = Field(
+        ...,
+        description="Provider-specific voice identifier.",
+        min_length=1,
+        max_length=128,
+    )
+    model: str = Field(
+        ...,
+        description="Provider-specific model identifier.",
+        min_length=1,
+        max_length=64,
+    )
+
+
+class SynthesizeRequest(BaseModel):
+    """POST /embed/synthesize body."""
+
+    token: str = Field(
+        ...,
+        description=(
+            "embed_token previously minted via the operator dashboard or "
+            "POST /embed/exchange-token. Validated against is_active, "
+            "expires_at, and allowed_domains (vs request Origin)."
+        ),
+        min_length=1,
+        max_length=512,
+    )
+    text: str = Field(
+        ...,
+        description=f"Text to synthesize. Caller MUST keep this ≤ {SYNTHESIZE_TEXT_MAX_CHARS} chars.",
+        min_length=1,
+        max_length=SYNTHESIZE_TEXT_MAX_CHARS,
+    )
+    voice_override: SynthesizeVoiceOverride | None = Field(
+        default=None,
+        description=(
+            "Optional per-call voice override. If omitted, the embed "
+            "token's owning user's stored TTS settings are used."
+        ),
+    )
+
+
+class SynthesizeResponse(BaseModel):
+    """POST /embed/synthesize response body."""
+
+    audio_url: str = Field(
+        ...,
+        description="Pre-signed GET URL to the synthesized audio. Valid for ~5 minutes.",
+    )
+    expires_at: datetime = Field(
+        ...,
+        description="When the pre-signed URL stops working. UTC.",
+    )
+    content_type: str = Field(
+        ...,
+        description="HTTP Content-Type of the audio (audio/wav or audio/mpeg).",
+    )
+    duration_seconds: float = Field(
+        ...,
+        description="Approximate duration of the synthesized audio.",
+    )
+    char_count: int = Field(
+        ...,
+        description="Length of the input text. Returned for billing / audit.",
+    )
+    provider: str = Field(
+        ...,
+        description="Which provider actually synthesized the audio.",
+    )
+
+
+@router.post(
+    "/synthesize",
+    response_model=SynthesizeResponse,
+    status_code=501,  # Not Implemented — skeleton; see design doc.
+    responses={
+        401: {"description": "Invalid or expired embed token."},
+        403: {"description": "Request origin not in token's allowed_domains."},
+        422: {"description": "Invalid voice_override or text_too_long."},
+        429: {"description": "Per-token rate limit exceeded."},
+        500: {"description": "Synthesis failed after provider retries."},
+        502: {"description": "Storage upload failed."},
+        501: {"description": "Endpoint is a WIP skeleton; implementation lands in a follow-up PR."},
+    },
+)
+async def synthesize(
+    request: SynthesizeRequest,
+) -> SynthesizeResponse:
+    """One-shot TTS synthesis via NoralVoice's 9-provider catalog.
+
+    **STATUS: WIP skeleton.** The handler currently returns ``501 Not
+    Implemented``. See ``docs/design/phase-6-nv-tts-synthesize.md`` for
+    the full design + implementation plan.
+
+    Implementation outline (skeleton — for review):
+
+      1. Validate ``token`` via the existing embed-token helpers.
+      2. Domain-check against ``Origin`` header.
+      3. Resolve user → ``user_configurations.tts``.
+      4. Apply ``voice_override`` if present (partial overrides rejected
+         in the Pydantic model).
+      5. Call ``api.services.pipecat.tts_one_shot.synthesize(...)``.
+      6. Call ``api.services.audio.synth_storage.upload_synth_audio(...)``.
+      7. Return :class:`SynthesizeResponse`.
+    """
+    # Skeleton: design-doc deliverable. Real handler lands in a follow-up.
+    raise HTTPException(
+        status_code=501,
+        detail=(
+            "synthesize is WIP. See docs/design/phase-6-nv-tts-synthesize.md "
+            "for the design + implementation plan."
+        ),
+    )
