@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from api.db.models import UserModel
+from api.sdk_expose import sdk_expose
 from api.services.auth.depends import get_user
 from api.services.reports import DailyReportService
 
@@ -35,7 +36,11 @@ class WorkflowRunDetail(BaseModel):
     created_at: str
 
 
-@router.get("/daily", response_model=DailyReportResponse)
+@router.get(
+    "/daily",
+    response_model=DailyReportResponse,
+    **sdk_expose(method="get_daily_report", description="Daily call-volume and disposition report for an organization, optionally filtered by workflow."),
+)
 async def get_daily_report(
     date: str = Query(..., description="Date in YYYY-MM-DD format"),
     timezone: str = Query(..., description="IANA timezone (e.g., 'America/New_York')"),
@@ -94,7 +99,11 @@ async def get_workflow_options(
     return [WorkflowOption(**w) for w in workflows]
 
 
-@router.get("/daily/runs", response_model=List[WorkflowRunDetail])
+@router.get(
+    "/daily/runs",
+    response_model=List[WorkflowRunDetail],
+    **sdk_expose(method="list_daily_runs", description="Per-run detail (phone number, disposition, duration) for a given day."),
+)
 async def get_daily_runs_detail(
     date: str = Query(..., description="Date in YYYY-MM-DD format"),
     timezone: str = Query(..., description="IANA timezone (e.g., 'America/New_York')"),
