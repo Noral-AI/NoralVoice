@@ -190,6 +190,24 @@ FORCE_TURN_RELAY = os.getenv("FORCE_TURN_RELAY", "false").lower() == "true"
 OSS_JWT_SECRET = os.getenv("OSS_JWT_SECRET", "change-me-in-production")
 OSS_JWT_EXPIRY_HOURS = int(os.getenv("OSS_JWT_EXPIRY_HOURS", "720"))  # 30 days
 
+# Native Google OAuth (alternative to email/password and NoralOS SSO).
+# Operator opt-in: when GOOGLE_OAUTH_ENABLED=true, /api/v1/auth/google/start
+# is active and the "Sign in with Google" button on the login page works.
+# When false, the start endpoint returns 503 and the UI hides the button.
+GOOGLE_OAUTH_ENABLED = os.getenv("GOOGLE_OAUTH_ENABLED", "false").lower() == "true"
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+GOOGLE_OAUTH_REDIRECT_URI = os.getenv(
+    "GOOGLE_OAUTH_REDIRECT_URI",
+    "https://voice.noral.ai/api/v1/auth/google/callback",
+)
+# Where to send the browser after a successful Google sign-in. Defaults to
+# the UI's standard post-login landing page; override per-deployment.
+GOOGLE_OAUTH_POST_LOGIN_REDIRECT = os.getenv(
+    "GOOGLE_OAUTH_POST_LOGIN_REDIRECT",
+    f"{UI_APP_URL}/after-sign-in",
+)
+
 # REMOVE-AFTER 2026-05-15: transitional flag. When True, Telnyx webhook
 # signature verification is skipped for configs that have no
 # webhook_public_key set (existing configs predating the field). Set in prod
