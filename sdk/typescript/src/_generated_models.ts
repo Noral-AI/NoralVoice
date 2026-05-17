@@ -490,6 +490,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/telephony-configs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Telephony Configurations
+         * @description List the org's telephony configurations with phone-number counts.
+         */
+        get: operations["list_telephony_configurations_api_v1_organizations_telephony_configs_get"];
+        put?: never;
+        /**
+         * Create Telephony Configuration
+         * @description Create a new telephony configuration for the org.
+         */
+        post: operations["create_telephony_configuration_api_v1_organizations_telephony_configs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/telephony-configs/{config_id}/phone-numbers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Phone Number */
+        post: operations["create_phone_number_api_v1_organizations_telephony_configs__config_id__phone_numbers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/reports/daily": {
         parameters: {
             query?: never;
@@ -835,6 +876,43 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * ARIConfigurationRequest
+         * @description Request schema for Asterisk ARI configuration.
+         */
+        ARIConfigurationRequest: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            provider: "ari";
+            /**
+             * Ari Endpoint
+             * @description ARI base URL (e.g., http://asterisk.example.com:8088)
+             */
+            ari_endpoint: string;
+            /**
+             * App Name
+             * @description Stasis application name registered in Asterisk
+             */
+            app_name: string;
+            /**
+             * App Password
+             * @description ARI user password
+             */
+            app_password: string;
+            /**
+             * Ws Client Name
+             * @description websocket_client.conf connection name for externalMedia (e.g., dograh_staging)
+             * @default
+             */
+            ws_client_name: string;
+            /**
+             * From Numbers
+             * @description List of SIP extensions/numbers for outbound calls (optional)
+             */
+            from_numbers?: string[];
+        };
+        /**
          * BatchRecordingCreateRequestSchema
          * @description Request schema for creating one or more recording records after upload.
          */
@@ -1146,6 +1224,37 @@ export interface components {
              * @default 5
              */
             min_calls_in_window: number;
+        };
+        /**
+         * CloudonixConfigurationRequest
+         * @description Request schema for Cloudonix configuration.
+         */
+        CloudonixConfigurationRequest: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            provider: "cloudonix";
+            /**
+             * Bearer Token
+             * @description Cloudonix API Bearer Token
+             */
+            bearer_token: string;
+            /**
+             * Domain Id
+             * @description Cloudonix Domain ID
+             */
+            domain_id: string;
+            /**
+             * Application Name
+             * @description Cloudonix Voice Application name. The application's url is updated when inbound workflows are attached to numbers on this domain. If omitted, an application is auto-created on save and its name is stored on the configuration.
+             */
+            application_name?: string | null;
+            /**
+             * From Numbers
+             * @description List of Cloudonix phone numbers (optional)
+             */
+            from_numbers?: string[];
         };
         /** CreateCampaignRequest */
         CreateCampaignRequest: {
@@ -1675,6 +1784,109 @@ export interface components {
             node_types: components["schemas"]["NodeSpec"][];
         };
         /**
+         * PhoneNumberCreateRequest
+         * @description Create a new phone number under a telephony configuration.
+         *
+         *     ``address_normalized`` and ``address_type`` are computed server-side from
+         *     ``address`` (and ``country_code`` if PSTN). ``address`` itself is stored
+         *     verbatim for display.
+         */
+        PhoneNumberCreateRequest: {
+            /** Address */
+            address: string;
+            /** Country Code */
+            country_code?: string | null;
+            /** Label */
+            label?: string | null;
+            /** Inbound Workflow Id */
+            inbound_workflow_id?: number | null;
+            /**
+             * Is Active
+             * @default true
+             */
+            is_active: boolean;
+            /**
+             * Is Default Caller Id
+             * @default false
+             */
+            is_default_caller_id: boolean;
+            /** Extra Metadata */
+            extra_metadata?: {
+                [key: string]: unknown;
+            };
+        };
+        /** PhoneNumberResponse */
+        PhoneNumberResponse: {
+            /** Id */
+            id: number;
+            /** Telephony Configuration Id */
+            telephony_configuration_id: number;
+            /** Address */
+            address: string;
+            /** Address Normalized */
+            address_normalized: string;
+            /** Address Type */
+            address_type: string;
+            /** Country Code */
+            country_code?: string | null;
+            /** Label */
+            label?: string | null;
+            /** Inbound Workflow Id */
+            inbound_workflow_id?: number | null;
+            /** Inbound Workflow Name */
+            inbound_workflow_name?: string | null;
+            /** Is Active */
+            is_active: boolean;
+            /** Is Default Caller Id */
+            is_default_caller_id: boolean;
+            /** Extra Metadata */
+            extra_metadata: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            provider_sync?: components["schemas"]["ProviderSyncStatus"] | null;
+        };
+        /**
+         * PlivoConfigurationRequest
+         * @description Request schema for Plivo configuration.
+         */
+        PlivoConfigurationRequest: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            provider: "plivo";
+            /**
+             * Auth Id
+             * @description Plivo Auth ID
+             */
+            auth_id: string;
+            /**
+             * Auth Token
+             * @description Plivo Auth Token
+             */
+            auth_token: string;
+            /**
+             * Application Id
+             * @description Plivo Application ID. The application's answer_url is updated when inbound workflows are attached to numbers on this account. If omitted, an application is auto-created on save and its id is stored on the configuration.
+             */
+            application_id?: string | null;
+            /**
+             * From Numbers
+             * @description List of Plivo phone numbers
+             */
+            from_numbers?: string[];
+        };
+        /**
          * ProcessDocumentRequestSchema
          * @description Request schema for triggering document processing.
          */
@@ -1777,6 +1989,20 @@ export interface components {
          * @enum {string}
          */
         PropertyType: "string" | "number" | "boolean" | "options" | "multi_options" | "fixed_collection" | "json" | "tool_refs" | "document_refs" | "recording_ref" | "credential_ref" | "mention_textarea" | "url";
+        /**
+         * ProviderSyncStatus
+         * @description Result of pushing a phone-number change to the upstream provider.
+         *
+         *     Returned alongside create/update responses when the route attempted to
+         *     sync inbound webhook configuration. ``ok=False`` is a warning, not a
+         *     fatal error — the DB write succeeded.
+         */
+        ProviderSyncStatus: {
+            /** Ok */
+            ok: boolean;
+            /** Message */
+            message?: string | null;
+        };
         /**
          * RecordingCreateRequestSchema
          * @description Request schema for creating a recording record after upload.
@@ -1997,6 +2223,119 @@ export interface components {
             /** Slots */
             slots: components["schemas"]["TimeSlotResponse"][];
         };
+        /**
+         * TelephonyConfigurationCreateRequest
+         * @description Body for ``POST /telephony-configs``.
+         *
+         *     ``config`` carries the provider-specific credential fields (the same
+         *     discriminated union used by the legacy single-config endpoint). Any
+         *     ``from_numbers`` on the inner config are ignored — phone numbers are
+         *     managed via the dedicated phone-numbers endpoints.
+         */
+        TelephonyConfigurationCreateRequest: {
+            /** Name */
+            name: string;
+            /**
+             * Is Default Outbound
+             * @default false
+             */
+            is_default_outbound: boolean;
+            /** Config */
+            config: components["schemas"]["ARIConfigurationRequest"] | components["schemas"]["CloudonixConfigurationRequest"] | components["schemas"]["PlivoConfigurationRequest"] | components["schemas"]["TelnyxConfigurationRequest"] | components["schemas"]["TwilioConfigurationRequest"] | components["schemas"]["VobizConfigurationRequest"] | components["schemas"]["VonageConfigurationRequest"];
+        };
+        /**
+         * TelephonyConfigurationDetail
+         * @description Body of ``GET /telephony-configs/{id}`` — credentials are masked.
+         */
+        TelephonyConfigurationDetail: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Provider */
+            provider: string;
+            /** Is Default Outbound */
+            is_default_outbound: boolean;
+            /** Credentials */
+            credentials: {
+                [key: string]: unknown;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * TelephonyConfigurationListItem
+         * @description One row in ``GET /telephony-configs``.
+         */
+        TelephonyConfigurationListItem: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Provider */
+            provider: string;
+            /** Is Default Outbound */
+            is_default_outbound: boolean;
+            /**
+             * Phone Number Count
+             * @default 0
+             */
+            phone_number_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** TelephonyConfigurationListResponse */
+        TelephonyConfigurationListResponse: {
+            /** Configurations */
+            configurations: components["schemas"]["TelephonyConfigurationListItem"][];
+        };
+        /**
+         * TelnyxConfigurationRequest
+         * @description Request schema for Telnyx configuration.
+         */
+        TelnyxConfigurationRequest: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            provider: "telnyx";
+            /**
+             * Api Key
+             * @description Telnyx API Key
+             */
+            api_key: string;
+            /**
+             * Connection Id
+             * @description Telnyx Call Control Application ID (connection_id). If omitted, a Call Control Application is auto-created on save and its id is stored on the configuration.
+             */
+            connection_id?: string | null;
+            /**
+             * Webhook Public Key
+             * @description Webhook public key from Mission Control Portal → Keys & Credentials → Public Key. Used to verify Telnyx webhook signatures.
+             */
+            webhook_public_key?: string | null;
+            /**
+             * From Numbers
+             * @description List of Telnyx phone numbers
+             */
+            from_numbers?: string[];
+        };
         /** TimeSlotRequest */
         TimeSlotRequest: {
             /** Day Of Week */
@@ -2129,6 +2468,32 @@ export interface components {
             /** @description Transfer Call configuration */
             config: components["schemas"]["TransferCallConfig"];
         };
+        /**
+         * TwilioConfigurationRequest
+         * @description Request schema for Twilio configuration.
+         */
+        TwilioConfigurationRequest: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            provider: "twilio";
+            /**
+             * Account Sid
+             * @description Twilio Account SID
+             */
+            account_sid: string;
+            /**
+             * Auth Token
+             * @description Twilio Auth Token
+             */
+            auth_token: string;
+            /**
+             * From Numbers
+             * @description List of Twilio phone numbers
+             */
+            from_numbers?: string[];
+        };
         /** UpdateCampaignRequest */
         UpdateCampaignRequest: {
             /** Name */
@@ -2186,6 +2551,73 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /**
+         * VobizConfigurationRequest
+         * @description Request schema for Vobiz configuration.
+         */
+        VobizConfigurationRequest: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            provider: "vobiz";
+            /**
+             * Auth Id
+             * @description Vobiz Account ID (e.g., MA_SYQRLN1K)
+             */
+            auth_id: string;
+            /**
+             * Auth Token
+             * @description Vobiz Auth Token
+             */
+            auth_token: string;
+            /**
+             * Application Id
+             * @description Vobiz Application ID. The application's answer_url is updated when inbound workflows are attached to numbers on this account. If omitted, an application is auto-created on save and its id is stored on the configuration.
+             */
+            application_id?: string | null;
+            /**
+             * From Numbers
+             * @description List of Vobiz phone numbers (E.164 without + prefix)
+             */
+            from_numbers?: string[];
+        };
+        /**
+         * VonageConfigurationRequest
+         * @description Request schema for Vonage configuration.
+         */
+        VonageConfigurationRequest: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            provider: "vonage";
+            /**
+             * Api Key
+             * @description Vonage API Key
+             */
+            api_key: string;
+            /**
+             * Api Secret
+             * @description Vonage API Secret
+             */
+            api_secret: string;
+            /**
+             * Application Id
+             * @description Vonage Application ID
+             */
+            application_id: string;
+            /**
+             * Private Key
+             * @description Private key for JWT generation
+             */
+            private_key: string;
+            /**
+             * From Numbers
+             * @description List of Vonage phone numbers (without + prefix)
+             */
+            from_numbers?: string[];
         };
         /**
          * WorkflowListResponse
@@ -2267,6 +2699,7 @@ export interface components {
     headers: never;
     pathItems: never;
 }
+export type AriConfigurationRequest = components['schemas']['ARIConfigurationRequest'];
 export type BatchRecordingCreateRequestSchema = components['schemas']['BatchRecordingCreateRequestSchema'];
 export type BatchRecordingCreateResponseSchema = components['schemas']['BatchRecordingCreateResponseSchema'];
 export type BatchRecordingUploadRequestSchema = components['schemas']['BatchRecordingUploadRequestSchema'];
@@ -2284,6 +2717,7 @@ export type ChunkSearchRequestSchema = components['schemas']['ChunkSearchRequest
 export type ChunkSearchResponseSchema = components['schemas']['ChunkSearchResponseSchema'];
 export type CircuitBreakerConfigRequest = components['schemas']['CircuitBreakerConfigRequest'];
 export type CircuitBreakerConfigResponse = components['schemas']['CircuitBreakerConfigResponse'];
+export type CloudonixConfigurationRequest = components['schemas']['CloudonixConfigurationRequest'];
 export type CreateCampaignRequest = components['schemas']['CreateCampaignRequest'];
 export type CreateToolRequest = components['schemas']['CreateToolRequest'];
 export type CreateWorkflowRequest = components['schemas']['CreateWorkflowRequest'];
@@ -2309,10 +2743,14 @@ export type NodeCategory = components['schemas']['NodeCategory'];
 export type NodeExample = components['schemas']['NodeExample'];
 export type NodeSpec = components['schemas']['NodeSpec'];
 export type NodeTypesResponse = components['schemas']['NodeTypesResponse'];
+export type PhoneNumberCreateRequest = components['schemas']['PhoneNumberCreateRequest'];
+export type PhoneNumberResponse = components['schemas']['PhoneNumberResponse'];
+export type PlivoConfigurationRequest = components['schemas']['PlivoConfigurationRequest'];
 export type ProcessDocumentRequestSchema = components['schemas']['ProcessDocumentRequestSchema'];
 export type PropertyOption = components['schemas']['PropertyOption'];
 export type PropertySpec = components['schemas']['PropertySpec'];
 export type PropertyType = components['schemas']['PropertyType'];
+export type ProviderSyncStatus = components['schemas']['ProviderSyncStatus'];
 export type RecordingCreateRequestSchema = components['schemas']['RecordingCreateRequestSchema'];
 export type RecordingListResponseSchema = components['schemas']['RecordingListResponseSchema'];
 export type RecordingResponseSchema = components['schemas']['RecordingResponseSchema'];
@@ -2323,16 +2761,24 @@ export type RetryConfigRequest = components['schemas']['RetryConfigRequest'];
 export type RetryConfigResponse = components['schemas']['RetryConfigResponse'];
 export type ScheduleConfigRequest = components['schemas']['ScheduleConfigRequest'];
 export type ScheduleConfigResponse = components['schemas']['ScheduleConfigResponse'];
+export type TelephonyConfigurationCreateRequest = components['schemas']['TelephonyConfigurationCreateRequest'];
+export type TelephonyConfigurationDetail = components['schemas']['TelephonyConfigurationDetail'];
+export type TelephonyConfigurationListItem = components['schemas']['TelephonyConfigurationListItem'];
+export type TelephonyConfigurationListResponse = components['schemas']['TelephonyConfigurationListResponse'];
+export type TelnyxConfigurationRequest = components['schemas']['TelnyxConfigurationRequest'];
 export type TimeSlotRequest = components['schemas']['TimeSlotRequest'];
 export type TimeSlotResponse = components['schemas']['TimeSlotResponse'];
 export type ToolParameter = components['schemas']['ToolParameter'];
 export type ToolResponse = components['schemas']['ToolResponse'];
 export type TransferCallConfig = components['schemas']['TransferCallConfig'];
 export type TransferCallToolDefinition = components['schemas']['TransferCallToolDefinition'];
+export type TwilioConfigurationRequest = components['schemas']['TwilioConfigurationRequest'];
 export type UpdateCampaignRequest = components['schemas']['UpdateCampaignRequest'];
 export type UpdateToolRequest = components['schemas']['UpdateToolRequest'];
 export type UpdateWorkflowRequest = components['schemas']['UpdateWorkflowRequest'];
 export type ValidationError = components['schemas']['ValidationError'];
+export type VobizConfigurationRequest = components['schemas']['VobizConfigurationRequest'];
+export type VonageConfigurationRequest = components['schemas']['VonageConfigurationRequest'];
 export type WorkflowListResponse = components['schemas']['WorkflowListResponse'];
 export type WorkflowResponse = components['schemas']['WorkflowResponse'];
 export type WorkflowRunDetail = components['schemas']['WorkflowRunDetail'];
@@ -3340,6 +3786,133 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ToolResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_telephony_configurations_api_v1_organizations_telephony_configs_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelephonyConfigurationListResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_telephony_configuration_api_v1_organizations_telephony_configs_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TelephonyConfigurationCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelephonyConfigurationDetail"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_phone_number_api_v1_organizations_telephony_configs__config_id__phone_numbers_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                config_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PhoneNumberCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PhoneNumberResponse"];
                 };
             };
             /** @description Not found */

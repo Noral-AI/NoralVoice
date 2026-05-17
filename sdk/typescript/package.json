@@ -1,6 +1,6 @@
 {
   "name": "@noralai/voice-sdk",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Typed builder for NoralVoice voice-AI workflows",
   "license": "BSD-2-Clause",
   "author": "Noral AI <support@noral.ai>",
