@@ -10,6 +10,7 @@ from api.db import db_client
 from api.db.models import UserModel
 from api.enums import PostHogEvent
 from api.schemas.user_configuration import UserConfiguration
+from api.services.auth.noral_sso import get_user_from_noralos_session
 from api.services.auth.stack_auth import stackauth
 from api.services.configuration.registry import ServiceProviders
 from api.services.posthog_client import capture_event
@@ -19,12 +20,29 @@ from api.utils.auth import decode_jwt_token
 async def get_user(
     authorization: Annotated[str | None, Header()] = None,
     x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
+    cookie: Annotated[str | None, Header()] = None,
 ) -> UserModel:
     # ------------------------------------------------------------------
     # Check if API key is provided (takes precedence)
     # ------------------------------------------------------------------
     if x_api_key:
         return await _handle_api_key_auth(x_api_key)
+
+    # ------------------------------------------------------------------
+    # Cross-product SSO: when AUTH_PROVIDER=noral, forward the inbound
+    # Cookie header to agent.noral.ai's Better Auth session endpoint and
+    # find-or-create a local user from the result. Falls through to a 401
+    # if the cookie is missing/invalid OR if agent.noral.ai is
+    # unreachable — never silently auth-bypassing.
+    # ------------------------------------------------------------------
+    if AUTH_PROVIDER == "noral":
+        sso_user = await get_user_from_noralos_session(cookie)
+        if sso_user is not None:
+            return sso_user
+        raise HTTPException(
+            status_code=401,
+            detail="No valid NoralOS session",
+        )
 
     # ------------------------------------------------------------------
     # Check if we're using local (email/password) auth
