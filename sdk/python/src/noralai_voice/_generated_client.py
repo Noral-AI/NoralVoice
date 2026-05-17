@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from dograh_sdk._generated_models import (
+from ._generated_models import (
     BatchRecordingCreateRequestSchema,
     BatchRecordingCreateResponseSchema,
     BatchRecordingUploadRequestSchema,
@@ -37,11 +37,16 @@ from dograh_sdk._generated_models import (
     InitiateCallRequest,
     NodeSpec,
     NodeTypesResponse,
+    PhoneNumberCreateRequest,
+    PhoneNumberResponse,
     ProcessDocumentRequestSchema,
     RecordingListResponseSchema,
     RecordingResponseSchema,
     RecordingUpdateRequestSchema,
     RedialCampaignRequest,
+    TelephonyConfigurationCreateRequest,
+    TelephonyConfigurationDetail,
+    TelephonyConfigurationListResponse,
     ToolResponse,
     UpdateCampaignRequest,
     UpdateToolRequest,
@@ -54,6 +59,11 @@ from dograh_sdk._generated_models import (
 
 class _GeneratedClient:
     # `DograhClient.__init__` installs `self._request` (see client.py).
+
+    def add_phone_number(self, config_id: int, *, body: PhoneNumberCreateRequest) -> PhoneNumberResponse:
+        """Register a phone number under an existing telephony configuration, optionally assigning it to a workflow for inbound routing. Returns the provider sync status when an inbound workflow is set."""
+        data = self._request("POST", f"/organizations/telephony-configs/{config_id}/phone-numbers", json=body.model_dump(mode="json", exclude_none=True))
+        return PhoneNumberResponse.model_validate(data)
 
     def create_campaign(self, *, body: CreateCampaignRequest) -> CampaignResponse:
         """Create a new outbound campaign."""
@@ -79,6 +89,11 @@ class _GeneratedClient:
         """Register one or more recording rows after audio has been uploaded via the presigned URLs."""
         data = self._request("POST", "/workflow-recordings/", json=body.model_dump(mode="json", exclude_none=True))
         return BatchRecordingCreateResponseSchema.model_validate(data)
+
+    def create_telephony_config(self, *, body: TelephonyConfigurationCreateRequest) -> TelephonyConfigurationDetail:
+        """Create a new telephony provider configuration for the org (e.g. Twilio account_sid + auth_token). Sensitive fields are masked in the response."""
+        data = self._request("POST", "/organizations/telephony-configs", json=body.model_dump(mode="json", exclude_none=True))
+        return TelephonyConfigurationDetail.model_validate(data)
 
     def create_tool(self, *, body: CreateToolRequest) -> ToolResponse:
         """Create a new HTTP tool definition (workflow agents can invoke during calls)."""
@@ -230,6 +245,11 @@ class _GeneratedClient:
             params["tts_voice_id"] = tts_voice_id
         data = self._request("GET", "/workflow-recordings/", params=params)
         return RecordingListResponseSchema.model_validate(data)
+
+    def list_telephony_configs(self) -> TelephonyConfigurationListResponse:
+        """List the org's telephony provider configurations (Twilio, Plivo, etc.) with phone-number counts. Sensitive credential fields are masked server-side before return."""
+        data = self._request("GET", "/organizations/telephony-configs")
+        return TelephonyConfigurationListResponse.model_validate(data)
 
     def list_tools(self, *, status: str | None = None, category: str | None = None) -> list[ToolResponse]:
         """List tools available to the authenticated organization."""

@@ -32,11 +32,16 @@ import type {
     InitiateCallRequest,
     NodeSpec,
     NodeTypesResponse,
+    PhoneNumberCreateRequest,
+    PhoneNumberResponse,
     ProcessDocumentRequestSchema,
     RecordingListResponseSchema,
     RecordingResponseSchema,
     RecordingUpdateRequestSchema,
     RedialCampaignRequest,
+    TelephonyConfigurationCreateRequest,
+    TelephonyConfigurationDetail,
+    TelephonyConfigurationListResponse,
     ToolResponse,
     UpdateCampaignRequest,
     UpdateToolRequest,
@@ -52,6 +57,11 @@ export abstract class _GeneratedClient {
         path: string,
         opts?: { json?: unknown; params?: Record<string, unknown> },
     ): Promise<T>;
+
+    /** Register a phone number under an existing telephony configuration, optionally assigning it to a workflow for inbound routing. Returns the provider sync status when an inbound workflow is set. */
+    async addPhoneNumber(configId: number, opts: { body: PhoneNumberCreateRequest }): Promise<PhoneNumberResponse> {
+        return this.request<PhoneNumberResponse>("POST", `/organizations/telephony-configs/${configId}/phone-numbers`, { json: opts.body });
+    }
 
     /** Create a new outbound campaign. */
     async createCampaign(opts: { body: CreateCampaignRequest }): Promise<CampaignResponse> {
@@ -76,6 +86,11 @@ export abstract class _GeneratedClient {
     /** Register one or more recording rows after audio has been uploaded via the presigned URLs. */
     async createRecordings(opts: { body: BatchRecordingCreateRequestSchema }): Promise<BatchRecordingCreateResponseSchema> {
         return this.request<BatchRecordingCreateResponseSchema>("POST", "/workflow-recordings/", { json: opts.body });
+    }
+
+    /** Create a new telephony provider configuration for the org (e.g. Twilio account_sid + auth_token). Sensitive fields are masked in the response. */
+    async createTelephonyConfig(opts: { body: TelephonyConfigurationCreateRequest }): Promise<TelephonyConfigurationDetail> {
+        return this.request<TelephonyConfigurationDetail>("POST", "/organizations/telephony-configs", { json: opts.body });
     }
 
     /** Create a new HTTP tool definition (workflow agents can invoke during calls). */
@@ -218,6 +233,11 @@ export abstract class _GeneratedClient {
             ...(opts.ttsVoiceId !== undefined ? { "tts_voice_id": opts.ttsVoiceId } : {}),
         };
         return this.request<RecordingListResponseSchema>("GET", "/workflow-recordings/", { params });
+    }
+
+    /** List the org's telephony provider configurations (Twilio, Plivo, etc.) with phone-number counts. Sensitive credential fields are masked server-side before return. */
+    async listTelephonyConfigs(): Promise<TelephonyConfigurationListResponse> {
+        return this.request<TelephonyConfigurationListResponse>("GET", "/organizations/telephony-configs");
     }
 
     /** List tools available to the authenticated organization. */

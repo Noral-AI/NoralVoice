@@ -11,7 +11,7 @@ Request/response types come from sibling model files already produced by
 here; this script doesn't generate types itself.
 
 Output:
-    --py-out  sdk/python/src/dograh_sdk/_generated_client.py
+    --py-out  sdk/python/src/noralai_voice/_generated_client.py
     --ts-out  sdk/typescript/src/_generated_client.ts
 """
 
@@ -225,7 +225,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from dograh_sdk._generated_models import (
+from ._generated_models import (
 {imports}
 )
 
