@@ -1,6 +1,6 @@
 [project]
 name = "noralai-voice"
-version = "0.2.0"
+version = "0.3.0"
 description = "Typed builder for NoralVoice voice-AI workflows"
 readme = "README.md"
 requires-python = ">=3.10"
