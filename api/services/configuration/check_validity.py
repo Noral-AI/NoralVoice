@@ -1,6 +1,7 @@
-from typing import Optional, TypedDict
+from typing import Optional
 
 import openai
+from typing_extensions import TypedDict
 from deepgram import DeepgramClient
 from groq import Groq
 

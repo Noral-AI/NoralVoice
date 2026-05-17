@@ -125,6 +125,238 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/campaign/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Campaign
+         * @description Create a new campaign
+         */
+        post: operations["create_campaign_api_v1_campaign_create_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaign/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Campaigns
+         * @description Get campaigns for user's organization
+         */
+        get: operations["get_campaigns_api_v1_campaign__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaign/{campaign_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Campaign
+         * @description Get campaign details
+         */
+        get: operations["get_campaign_api_v1_campaign__campaign_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Campaign
+         * @description Update campaign settings (name, retry config, max concurrency, schedule)
+         */
+        patch: operations["update_campaign_api_v1_campaign__campaign_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/campaign/{campaign_id}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Campaign
+         * @description Start campaign execution
+         */
+        post: operations["start_campaign_api_v1_campaign__campaign_id__start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaign/{campaign_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pause Campaign
+         * @description Pause campaign execution
+         */
+        post: operations["pause_campaign_api_v1_campaign__campaign_id__pause_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaign/{campaign_id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Campaign Runs
+         * @description Get campaign workflow runs with pagination, filters and sorting
+         */
+        get: operations["get_campaign_runs_api_v1_campaign__campaign_id__runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaign/{campaign_id}/redial": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Redial Campaign
+         * @description Create a new campaign that re-dials unique subscribers from a completed
+         *     campaign whose latest call resulted in voicemail, no-answer, or busy.
+         *
+         *     The new campaign is created in 'created' state with queued_runs pre-seeded
+         *     from the parent's original initial contexts. A campaign can be redialed at
+         *     most once.
+         */
+        post: operations["redial_campaign_api_v1_campaign__campaign_id__redial_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaign/{campaign_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resume Campaign
+         * @description Resume a paused campaign
+         */
+        post: operations["resume_campaign_api_v1_campaign__campaign_id__resume_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaign/{campaign_id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Campaign Progress
+         * @description Get current campaign progress and statistics
+         */
+        get: operations["get_campaign_progress_api_v1_campaign__campaign_id__progress_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaign/{campaign_id}/source-download-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Campaign Source Download Url
+         * @description Get presigned download URL for campaign CSV source file
+         *
+         *     Only works for CSV source type. For Google Sheets, use the source_id directly.
+         *     Validates that the campaign belongs to the user's organization for security.
+         */
+        get: operations["get_campaign_source_download_url_api_v1_campaign__campaign_id__source_download_url_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/campaign/{campaign_id}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download Campaign Report
+         * @description Download a CSV report of completed campaign runs.
+         */
+        get: operations["download_campaign_report_api_v1_campaign__campaign_id__report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/credentials/": {
         parameters: {
             query?: never;
@@ -168,7 +400,226 @@ export interface paths {
          */
         get: operations["list_tools_api_v1_tools__get"];
         put?: never;
+        /**
+         * Create Tool
+         * @description Create a new tool.
+         *
+         *     Args:
+         *         request: The tool creation request
+         *
+         *     Returns:
+         *         The created tool
+         */
+        post: operations["create_tool_api_v1_tools__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tools/{tool_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Tool
+         * @description Get a specific tool by UUID.
+         *
+         *     Args:
+         *         tool_uuid: The UUID of the tool
+         *
+         *     Returns:
+         *         The tool
+         */
+        get: operations["get_tool_api_v1_tools__tool_uuid__get"];
+        /**
+         * Update Tool
+         * @description Update a tool.
+         *
+         *     Args:
+         *         tool_uuid: The UUID of the tool to update
+         *         request: The update request
+         *
+         *     Returns:
+         *         The updated tool
+         */
+        put: operations["update_tool_api_v1_tools__tool_uuid__put"];
         post?: never;
+        /**
+         * Delete Tool
+         * @description Archive (soft delete) a tool.
+         *
+         *     Args:
+         *         tool_uuid: The UUID of the tool to delete
+         *
+         *     Returns:
+         *         Success message
+         */
+        delete: operations["delete_tool_api_v1_tools__tool_uuid__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tools/{tool_uuid}/unarchive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unarchive Tool
+         * @description Unarchive a tool (restore from archived state).
+         *
+         *     Args:
+         *         tool_uuid: The UUID of the tool to unarchive
+         *
+         *     Returns:
+         *         The unarchived tool
+         */
+        post: operations["unarchive_tool_api_v1_tools__tool_uuid__unarchive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/reports/daily": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Daily Report
+         * @description Get daily report for the specified date and timezone.
+         *     If workflow_id is provided, filters results to that specific workflow.
+         *     If workflow_id is None, includes all workflows for the organization.
+         */
+        get: operations["get_daily_report_api_v1_organizations_reports_daily_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/reports/daily/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Daily Runs Detail
+         * @description Get detailed workflow runs for the specified date.
+         *     Used for CSV export functionality.
+         */
+        get: operations["get_daily_runs_detail_api_v1_organizations_reports_daily_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflow/{workflow_id}/embed-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Embed Token
+         * @description Get the embed token for a workflow if it exists.
+         */
+        get: operations["get_embed_token_api_v1_workflow__workflow_id__embed_token_get"];
+        put?: never;
+        /**
+         * Create Or Update Embed Token
+         * @description Create or update an embed token for a workflow.
+         *     Each workflow can have only one active embed token.
+         */
+        post: operations["create_or_update_embed_token_api_v1_workflow__workflow_id__embed_token_post"];
+        /**
+         * Deactivate Embed Token
+         * @description Deactivate the embed token for a workflow.
+         */
+        delete: operations["deactivate_embed_token_api_v1_workflow__workflow_id__embed_token_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge-base/upload-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get presigned URL for document upload
+         * @description Generate a presigned PUT URL for uploading a document.
+         *
+         *     This endpoint:
+         *     1. Generates a unique document UUID for organizing the S3 key
+         *     2. Generates a presigned S3/MinIO URL for uploading the file
+         *     3. Returns the upload URL and document metadata
+         *
+         *     After uploading to the returned URL, call /process-document to create
+         *     the document record and trigger processing.
+         *
+         *     Access Control:
+         *     * All authenticated users can upload documents scoped to their organization.
+         */
+        post: operations["get_upload_url_api_v1_knowledge_base_upload_url_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge-base/process-document": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Trigger document processing
+         * @description Trigger asynchronous processing of an uploaded document.
+         *
+         *     This endpoint should be called after successfully uploading a file to the presigned URL.
+         *     It will:
+         *     1. Create a document record in the database with the specified UUID
+         *     2. Enqueue a background task to process the document (chunking and embedding)
+         *
+         *     The document status will be updated from 'pending' -> 'processing' -> 'completed' or 'failed'.
+         *
+         *     Embedding:
+         *     Uses OpenAI text-embedding-3-small (1536-dimensional embeddings, requires API key configured in Model Configurations).
+         *
+         *     Access Control:
+         *     * Users can only process documents in their organization.
+         */
+        post: operations["process_document_api_v1_knowledge_base_process_document_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -198,6 +649,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/knowledge-base/documents/{document_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get document details
+         * @description Get details of a specific document.
+         *
+         *     Access Control:
+         *     * Users can only access documents from their organization.
+         */
+        get: operations["get_document_api_v1_knowledge_base_documents__document_uuid__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete document
+         * @description Soft delete a document and its chunks.
+         *
+         *     Access Control:
+         *     * Users can only delete documents from their organization.
+         */
+        delete: operations["delete_document_api_v1_knowledge_base_documents__document_uuid__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/knowledge-base/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Search for similar chunks
+         * @description Search for document chunks similar to the query.
+         *
+         *     This endpoint uses vector similarity search to find relevant chunks.
+         *     Results are returned without threshold filtering - apply similarity
+         *     thresholds at the application layer after optional reranking.
+         *
+         *     Access Control:
+         *     * Users can only search documents from their organization.
+         */
+        post: operations["search_chunks_api_v1_knowledge_base_search_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflow-recordings/upload-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get presigned URLs for recording uploads
+         * @description Generate presigned PUT URLs for uploading one or more audio recordings.
+         */
+        post: operations["get_upload_urls_api_v1_workflow_recordings_upload_url_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workflow-recordings/": {
         parameters: {
             query?: never;
@@ -211,11 +739,55 @@ export interface paths {
          */
         get: operations["list_recordings_api_v1_workflow_recordings__get"];
         put?: never;
-        post?: never;
+        /**
+         * Create recording records after upload
+         * @description Create one or more recording records after audio files have been uploaded.
+         */
+        post: operations["create_recordings_api_v1_workflow_recordings__post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflow-recordings/{recording_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a recording
+         * @description Soft delete a recording.
+         */
+        delete: operations["delete_recording_api_v1_workflow_recordings__recording_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workflow-recordings/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update a recording's Recording ID
+         * @description Update the recording_id (descriptive name) of a recording.
+         */
+        patch: operations["update_recording_api_v1_workflow_recordings__id__patch"];
         trace?: never;
     };
     "/api/v1/node-types": {
@@ -262,6 +834,67 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * BatchRecordingCreateRequestSchema
+         * @description Request schema for creating one or more recording records after upload.
+         */
+        BatchRecordingCreateRequestSchema: {
+            /**
+             * Recordings
+             * @description List of recordings to create
+             */
+            recordings: components["schemas"]["RecordingCreateRequestSchema"][];
+        };
+        /**
+         * BatchRecordingCreateResponseSchema
+         * @description Response schema for recording creation.
+         */
+        BatchRecordingCreateResponseSchema: {
+            /**
+             * Recordings
+             * @description Created recording records
+             */
+            recordings: components["schemas"]["RecordingResponseSchema"][];
+        };
+        /**
+         * BatchRecordingUploadRequestSchema
+         * @description Request schema for getting presigned upload URLs for one or more files.
+         */
+        BatchRecordingUploadRequestSchema: {
+            /**
+             * Files
+             * @description List of files to upload
+             */
+            files: components["schemas"]["FileDescriptor"][];
+        };
+        /**
+         * BatchRecordingUploadResponseSchema
+         * @description Response schema with presigned upload URLs.
+         */
+        BatchRecordingUploadResponseSchema: {
+            /**
+             * Items
+             * @description Upload URLs for each file
+             */
+            items: components["schemas"]["RecordingUploadResponseSchema"][];
+        };
+        /**
+         * CalculatorToolDefinition
+         * @description Tool definition for Calculator tools (no configuration needed).
+         */
+        CalculatorToolDefinition: {
+            /**
+             * Schema Version
+             * @description Schema version
+             * @default 1
+             */
+            schema_version: number;
+            /**
+             * @description Tool type (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "calculator";
+        };
         /** CallDispositionCodes */
         CallDispositionCodes: {
             /**
@@ -269,6 +902,295 @@ export interface components {
              * @default []
              */
             disposition_codes: string[];
+        };
+        /**
+         * CampaignLogEntryResponse
+         * @description A single timestamped entry from the campaign's append-only log.
+         *
+         *     Surfaced in the UI so operators can see why a campaign moved to
+         *     paused / failed without digging through server logs.
+         */
+        CampaignLogEntryResponse: {
+            /** Ts */
+            ts: string;
+            /** Level */
+            level: string;
+            /** Event */
+            event: string;
+            /** Message */
+            message: string;
+            /** Details */
+            details?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** CampaignProgressResponse */
+        CampaignProgressResponse: {
+            /** Campaign Id */
+            campaign_id: number;
+            /** State */
+            state: string;
+            /** Total Rows */
+            total_rows: number;
+            /** Processed Rows */
+            processed_rows: number;
+            /** Failed Calls */
+            failed_calls: number;
+            /** Progress Percentage */
+            progress_percentage: number;
+            /** Source Sync */
+            source_sync: {
+                [key: string]: unknown;
+            };
+            /** Rate Limit */
+            rate_limit: number;
+            /** Started At */
+            started_at: string | null;
+            /** Completed At */
+            completed_at: string | null;
+        };
+        /** CampaignResponse */
+        CampaignResponse: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Workflow Id */
+            workflow_id: number;
+            /** Workflow Name */
+            workflow_name: string;
+            /** State */
+            state: string;
+            /** Source Type */
+            source_type: string;
+            /** Source Id */
+            source_id: string;
+            /** Total Rows */
+            total_rows: number | null;
+            /** Processed Rows */
+            processed_rows: number;
+            /** Failed Rows */
+            failed_rows: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Started At */
+            started_at: string | null;
+            /** Completed At */
+            completed_at: string | null;
+            retry_config: components["schemas"]["RetryConfigResponse"];
+            /** Max Concurrency */
+            max_concurrency?: number | null;
+            schedule_config?: components["schemas"]["ScheduleConfigResponse"] | null;
+            circuit_breaker?: components["schemas"]["CircuitBreakerConfigResponse"] | null;
+            /**
+             * Executed Count
+             * @default 0
+             */
+            executed_count: number;
+            /**
+             * Total Queued Count
+             * @default 0
+             */
+            total_queued_count: number;
+            /** Parent Campaign Id */
+            parent_campaign_id?: number | null;
+            /** Redialed Campaign Id */
+            redialed_campaign_id?: number | null;
+            /** Telephony Configuration Id */
+            telephony_configuration_id?: number | null;
+            /** Telephony Configuration Name */
+            telephony_configuration_name?: string | null;
+            /** Logs */
+            logs?: components["schemas"]["CampaignLogEntryResponse"][];
+        };
+        /**
+         * CampaignRunsResponse
+         * @description Paginated response for campaign workflow runs
+         */
+        CampaignRunsResponse: {
+            /** Runs */
+            runs: {
+                [key: string]: unknown;
+            }[];
+            /** Total Count */
+            total_count: number;
+            /** Page */
+            page: number;
+            /** Limit */
+            limit: number;
+            /** Total Pages */
+            total_pages: number;
+        };
+        /** CampaignSourceDownloadResponse */
+        CampaignSourceDownloadResponse: {
+            /** Download Url */
+            download_url: string;
+            /** Expires In */
+            expires_in: number;
+        };
+        /** CampaignsResponse */
+        CampaignsResponse: {
+            /** Campaigns */
+            campaigns: components["schemas"]["CampaignResponse"][];
+        };
+        /**
+         * ChunkResponseSchema
+         * @description Response schema for a document chunk.
+         */
+        ChunkResponseSchema: {
+            /** Id */
+            id: number;
+            /** Document Id */
+            document_id: number;
+            /** Chunk Text */
+            chunk_text: string;
+            /** Contextualized Text */
+            contextualized_text: string | null;
+            /** Chunk Index */
+            chunk_index: number;
+            /** Chunk Metadata */
+            chunk_metadata: {
+                [key: string]: unknown;
+            };
+            /** Filename */
+            filename: string;
+            /** Document Uuid */
+            document_uuid: string;
+            /** Similarity */
+            similarity: number;
+        };
+        /**
+         * ChunkSearchRequestSchema
+         * @description Request schema for searching similar chunks.
+         */
+        ChunkSearchRequestSchema: {
+            /**
+             * Query
+             * @description Search query text
+             */
+            query: string;
+            /**
+             * Limit
+             * @description Maximum number of results
+             * @default 5
+             */
+            limit: number;
+            /**
+             * Document Uuids
+             * @description Filter by specific document UUIDs
+             */
+            document_uuids?: string[] | null;
+            /**
+             * Min Similarity
+             * @description Minimum similarity threshold
+             */
+            min_similarity?: number | null;
+        };
+        /**
+         * ChunkSearchResponseSchema
+         * @description Response schema for chunk search results.
+         */
+        ChunkSearchResponseSchema: {
+            /** Chunks */
+            chunks: components["schemas"]["ChunkResponseSchema"][];
+            /** Query */
+            query: string;
+            /** Total Results */
+            total_results: number;
+        };
+        /** CircuitBreakerConfigRequest */
+        CircuitBreakerConfigRequest: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Failure Threshold
+             * @default 0.5
+             */
+            failure_threshold: number;
+            /**
+             * Window Seconds
+             * @default 120
+             */
+            window_seconds: number;
+            /**
+             * Min Calls In Window
+             * @default 5
+             */
+            min_calls_in_window: number;
+        };
+        /** CircuitBreakerConfigResponse */
+        CircuitBreakerConfigResponse: {
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /**
+             * Failure Threshold
+             * @default 0.5
+             */
+            failure_threshold: number;
+            /**
+             * Window Seconds
+             * @default 120
+             */
+            window_seconds: number;
+            /**
+             * Min Calls In Window
+             * @default 5
+             */
+            min_calls_in_window: number;
+        };
+        /** CreateCampaignRequest */
+        CreateCampaignRequest: {
+            /** Name */
+            name: string;
+            /** Workflow Id */
+            workflow_id: number;
+            /** Source Type */
+            source_type: string;
+            /** Source Id */
+            source_id: string;
+            /** Telephony Configuration Id */
+            telephony_configuration_id?: number | null;
+            retry_config?: components["schemas"]["RetryConfigRequest"] | null;
+            /** Max Concurrency */
+            max_concurrency?: number | null;
+            schedule_config?: components["schemas"]["ScheduleConfigRequest"] | null;
+            circuit_breaker?: components["schemas"]["CircuitBreakerConfigRequest"] | null;
+        };
+        /**
+         * CreateToolRequest
+         * @description Request schema for creating a tool.
+         */
+        CreateToolRequest: {
+            /** Name */
+            name: string;
+            /** Description */
+            description?: string | null;
+            /**
+             * Category
+             * @default http_api
+             */
+            category: string;
+            /**
+             * Icon
+             * @default globe
+             */
+            icon: string | null;
+            /**
+             * Icon Color
+             * @default #3B82F6
+             */
+            icon_color: string | null;
+            /** Definition */
+            definition: components["schemas"]["HttpApiToolDefinition"] | components["schemas"]["EndCallToolDefinition"] | components["schemas"]["TransferCallToolDefinition"] | components["schemas"]["CalculatorToolDefinition"];
         };
         /** CreateWorkflowRequest */
         CreateWorkflowRequest: {
@@ -309,6 +1231,27 @@ export interface components {
             created_at: string;
             /** Updated At */
             updated_at: string | null;
+        };
+        /** DailyReportResponse */
+        DailyReportResponse: {
+            /** Date */
+            date: string;
+            /** Timezone */
+            timezone: string;
+            /** Workflow Id */
+            workflow_id: number | null;
+            /** Metrics */
+            metrics: {
+                [key: string]: number;
+            };
+            /** Disposition Distribution */
+            disposition_distribution: {
+                [key: string]: unknown;
+            }[];
+            /** Call Duration Distribution */
+            call_duration_distribution: {
+                [key: string]: unknown;
+            }[];
         };
         /**
          * DisplayOptions
@@ -404,6 +1347,169 @@ export interface components {
             is_active: boolean;
         };
         /**
+         * DocumentUploadRequestSchema
+         * @description Request schema for initiating document upload.
+         */
+        DocumentUploadRequestSchema: {
+            /**
+             * Filename
+             * @description Name of the file to upload
+             */
+            filename: string;
+            /**
+             * Mime Type
+             * @description MIME type of the file
+             */
+            mime_type: string;
+            /**
+             * Custom Metadata
+             * @description Optional custom metadata
+             */
+            custom_metadata?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * DocumentUploadResponseSchema
+         * @description Response schema containing upload URL and document metadata.
+         */
+        DocumentUploadResponseSchema: {
+            /**
+             * Upload Url
+             * @description Signed URL for uploading the file
+             */
+            upload_url: string;
+            /**
+             * Document Uuid
+             * @description Unique identifier for the document
+             */
+            document_uuid: string;
+            /**
+             * S3 Key
+             * @description S3 key where file should be uploaded
+             */
+            s3_key: string;
+        };
+        /** EmbedTokenRequest */
+        EmbedTokenRequest: {
+            /** Allowed Domains */
+            allowed_domains?: string[] | null;
+            /** Settings */
+            settings?: {
+                [key: string]: unknown;
+            } | null;
+            /** Usage Limit */
+            usage_limit?: number | null;
+            /**
+             * Expires In Days
+             * @default 30
+             */
+            expires_in_days: number | null;
+        };
+        /** EmbedTokenResponse */
+        EmbedTokenResponse: {
+            /** Id */
+            id: number;
+            /** Token */
+            token: string;
+            /** Allowed Domains */
+            allowed_domains: string[] | null;
+            /** Settings */
+            settings: {
+                [key: string]: unknown;
+            } | null;
+            /** Is Active */
+            is_active: boolean;
+            /** Usage Count */
+            usage_count: number;
+            /** Usage Limit */
+            usage_limit: number | null;
+            /** Expires At */
+            expires_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Embed Script */
+            embed_script: string;
+        };
+        /**
+         * EndCallConfig
+         * @description Configuration for End Call tools.
+         */
+        EndCallConfig: {
+            /**
+             * Messagetype
+             * @description Type of goodbye message
+             * @default none
+             * @enum {string}
+             */
+            messageType: "none" | "custom" | "audio";
+            /**
+             * Custommessage
+             * @description Custom message to play before ending the call
+             */
+            customMessage?: string | null;
+            /**
+             * Audiorecordingid
+             * @description Recording ID for audio goodbye message
+             */
+            audioRecordingId?: string | null;
+            /**
+             * Endcallreason
+             * @description When enabled, LLM must provide a reason for ending the call. The reason is set as call disposition and added to call tags.
+             * @default false
+             */
+            endCallReason: boolean;
+            /**
+             * Endcallreasondescription
+             * @description Description shown to the LLM for the reason parameter. Used only when endCallReason is enabled.
+             */
+            endCallReasonDescription?: string | null;
+        };
+        /**
+         * EndCallToolDefinition
+         * @description Tool definition for End Call tools.
+         */
+        EndCallToolDefinition: {
+            /**
+             * Schema Version
+             * @description Schema version
+             * @default 1
+             */
+            schema_version: number;
+            /**
+             * @description Tool type (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "end_call";
+            /** @description End Call configuration */
+            config: components["schemas"]["EndCallConfig"];
+        };
+        /**
+         * FileDescriptor
+         * @description Descriptor for a single file in a batch upload request.
+         */
+        FileDescriptor: {
+            /**
+             * Filename
+             * @description Original filename of the audio file
+             */
+            filename: string;
+            /**
+             * Mime Type
+             * @description MIME type of the audio file
+             * @default audio/wav
+             */
+            mime_type: string;
+            /**
+             * File Size
+             * @description File size in bytes (max 5MB)
+             */
+            file_size: number;
+        };
+        /**
          * GraphConstraints
          * @description Per-node-type graph rules. WorkflowGraph enforces these at validation.
          */
@@ -421,6 +1527,79 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * HttpApiConfig
+         * @description Configuration for HTTP API tools.
+         */
+        HttpApiConfig: {
+            /**
+             * Method
+             * @description HTTP method (GET, POST, PUT, PATCH, DELETE)
+             */
+            method: string;
+            /**
+             * Url
+             * @description Target URL
+             */
+            url: string;
+            /**
+             * Headers
+             * @description Static headers to include
+             */
+            headers?: {
+                [key: string]: string;
+            } | null;
+            /**
+             * Credential Uuid
+             * @description Reference to ExternalCredentialModel for auth
+             */
+            credential_uuid?: string | null;
+            /**
+             * Parameters
+             * @description Parameters that the tool accepts from LLM
+             */
+            parameters?: components["schemas"]["ToolParameter"][] | null;
+            /**
+             * Timeout Ms
+             * @description Request timeout in milliseconds
+             * @default 5000
+             */
+            timeout_ms: number | null;
+            /**
+             * Custommessage
+             * @description Custom message to play after tool execution
+             */
+            customMessage?: string | null;
+            /**
+             * Custommessagetype
+             * @description Type of custom message: text or audio
+             */
+            customMessageType?: ("text" | "audio") | null;
+            /**
+             * Custommessagerecordingid
+             * @description Recording ID for audio custom message
+             */
+            customMessageRecordingId?: string | null;
+        };
+        /**
+         * HttpApiToolDefinition
+         * @description Tool definition for HTTP API tools.
+         */
+        HttpApiToolDefinition: {
+            /**
+             * Schema Version
+             * @description Schema version
+             * @default 1
+             */
+            schema_version: number;
+            /**
+             * @description Tool type (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "http_api";
+            /** @description HTTP API configuration */
+            config: components["schemas"]["HttpApiConfig"];
         };
         /** InitiateCallRequest */
         InitiateCallRequest: {
@@ -494,6 +1673,28 @@ export interface components {
             spec_version: string;
             /** Node Types */
             node_types: components["schemas"]["NodeSpec"][];
+        };
+        /**
+         * ProcessDocumentRequestSchema
+         * @description Request schema for triggering document processing.
+         */
+        ProcessDocumentRequestSchema: {
+            /**
+             * Document Uuid
+             * @description Document UUID to process
+             */
+            document_uuid: string;
+            /**
+             * S3 Key
+             * @description S3 key of the uploaded file
+             */
+            s3_key: string;
+            /**
+             * Retrieval Mode
+             * @description Retrieval mode: 'chunked' for vector search or 'full_document' for full text retrieval
+             * @default chunked
+             */
+            retrieval_mode: string;
         };
         /**
          * PropertyOption
@@ -577,6 +1778,49 @@ export interface components {
          */
         PropertyType: "string" | "number" | "boolean" | "options" | "multi_options" | "fixed_collection" | "json" | "tool_refs" | "document_refs" | "recording_ref" | "credential_ref" | "mention_textarea" | "url";
         /**
+         * RecordingCreateRequestSchema
+         * @description Request schema for creating a recording record after upload.
+         */
+        RecordingCreateRequestSchema: {
+            /**
+             * Recording Id
+             * @description Short recording ID from upload step
+             */
+            recording_id: string;
+            /**
+             * Tts Provider
+             * @description TTS provider (e.g. elevenlabs)
+             */
+            tts_provider?: string | null;
+            /**
+             * Tts Model
+             * @description TTS model name
+             */
+            tts_model?: string | null;
+            /**
+             * Tts Voice Id
+             * @description TTS voice identifier
+             */
+            tts_voice_id?: string | null;
+            /**
+             * Transcript
+             * @description User-provided transcript of the recording
+             */
+            transcript: string;
+            /**
+             * Storage Key
+             * @description Storage key from upload step
+             */
+            storage_key: string;
+            /**
+             * Metadata
+             * @description Optional metadata (file_size, duration, etc.)
+             */
+            metadata?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
          * RecordingListResponseSchema
          * @description Response schema for list of recordings.
          */
@@ -626,6 +1870,179 @@ export interface components {
             is_active: boolean;
         };
         /**
+         * RecordingUpdateRequestSchema
+         * @description Request schema for updating a recording's ID.
+         */
+        RecordingUpdateRequestSchema: {
+            /**
+             * Recording Id
+             * @description New descriptive recording ID (letters, numbers, hyphens, underscores only)
+             */
+            recording_id: string;
+        };
+        /**
+         * RecordingUploadResponseSchema
+         * @description Response schema with presigned upload URL.
+         */
+        RecordingUploadResponseSchema: {
+            /**
+             * Upload Url
+             * @description Presigned URL for uploading the audio
+             */
+            upload_url: string;
+            /**
+             * Recording Id
+             * @description Short unique recording ID
+             */
+            recording_id: string;
+            /**
+             * Storage Key
+             * @description Storage key where file will be uploaded
+             */
+            storage_key: string;
+        };
+        /** RedialCampaignRequest */
+        RedialCampaignRequest: {
+            /**
+             * Name
+             * @description Name for the redial campaign
+             */
+            name?: string | null;
+            /**
+             * Retry On Voicemail
+             * @default true
+             */
+            retry_on_voicemail: boolean;
+            /**
+             * Retry On No Answer
+             * @default true
+             */
+            retry_on_no_answer: boolean;
+            /**
+             * Retry On Busy
+             * @default true
+             */
+            retry_on_busy: boolean;
+            retry_config?: components["schemas"]["RetryConfigRequest"] | null;
+        };
+        /** RetryConfigRequest */
+        RetryConfigRequest: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Max Retries
+             * @default 2
+             */
+            max_retries: number;
+            /**
+             * Retry Delay Seconds
+             * @default 120
+             */
+            retry_delay_seconds: number;
+            /**
+             * Retry On Busy
+             * @default true
+             */
+            retry_on_busy: boolean;
+            /**
+             * Retry On No Answer
+             * @default true
+             */
+            retry_on_no_answer: boolean;
+            /**
+             * Retry On Voicemail
+             * @default true
+             */
+            retry_on_voicemail: boolean;
+        };
+        /** RetryConfigResponse */
+        RetryConfigResponse: {
+            /** Enabled */
+            enabled: boolean;
+            /** Max Retries */
+            max_retries: number;
+            /** Retry Delay Seconds */
+            retry_delay_seconds: number;
+            /** Retry On Busy */
+            retry_on_busy: boolean;
+            /** Retry On No Answer */
+            retry_on_no_answer: boolean;
+            /** Retry On Voicemail */
+            retry_on_voicemail: boolean;
+        };
+        /** ScheduleConfigRequest */
+        ScheduleConfigRequest: {
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /**
+             * Timezone
+             * @default UTC
+             */
+            timezone: string;
+            /** Slots */
+            slots: components["schemas"]["TimeSlotRequest"][];
+        };
+        /** ScheduleConfigResponse */
+        ScheduleConfigResponse: {
+            /** Enabled */
+            enabled: boolean;
+            /** Timezone */
+            timezone: string;
+            /** Slots */
+            slots: components["schemas"]["TimeSlotResponse"][];
+        };
+        /** TimeSlotRequest */
+        TimeSlotRequest: {
+            /** Day Of Week */
+            day_of_week: number;
+            /** Start Time */
+            start_time: string;
+            /** End Time */
+            end_time: string;
+        };
+        /** TimeSlotResponse */
+        TimeSlotResponse: {
+            /** Day Of Week */
+            day_of_week: number;
+            /** Start Time */
+            start_time: string;
+            /** End Time */
+            end_time: string;
+        };
+        /**
+         * ToolParameter
+         * @description A parameter that the tool accepts.
+         */
+        ToolParameter: {
+            /**
+             * Name
+             * @description Parameter name (used as key in request body)
+             */
+            name: string;
+            /**
+             * Type
+             * @description Parameter type: string, number, or boolean
+             */
+            type: string;
+            /**
+             * Description
+             * @description Description of what this parameter is for
+             */
+            description: string;
+            /**
+             * Required
+             * @description Whether this parameter is required
+             * @default true
+             */
+            required: boolean;
+        };
+        /**
          * ToolResponse
          * @description Response schema for a tool.
          */
@@ -658,6 +2075,87 @@ export interface components {
             /** Updated At */
             updated_at: string | null;
             created_by?: components["schemas"]["CreatedByResponse"] | null;
+        };
+        /**
+         * TransferCallConfig
+         * @description Configuration for Transfer Call tools.
+         */
+        TransferCallConfig: {
+            /**
+             * Destination
+             * @description Phone number or SIP endpoint to transfer the call to (E.164 format e.g., +1234567890, or SIP endpoint e.g., PJSIP/1234)
+             */
+            destination: string;
+            /**
+             * Messagetype
+             * @description Type of message to play before transfer
+             * @default none
+             * @enum {string}
+             */
+            messageType: "none" | "custom" | "audio";
+            /**
+             * Custommessage
+             * @description Custom message to play before transferring the call
+             */
+            customMessage?: string | null;
+            /**
+             * Audiorecordingid
+             * @description Recording ID for audio message before transfer
+             */
+            audioRecordingId?: string | null;
+            /**
+             * Timeout
+             * @description Maximum time in seconds to wait for destination to answer (5-120 seconds)
+             * @default 30
+             */
+            timeout: number;
+        };
+        /**
+         * TransferCallToolDefinition
+         * @description Tool definition for Transfer Call tools.
+         */
+        TransferCallToolDefinition: {
+            /**
+             * Schema Version
+             * @description Schema version
+             * @default 1
+             */
+            schema_version: number;
+            /**
+             * @description Tool type (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "transfer_call";
+            /** @description Transfer Call configuration */
+            config: components["schemas"]["TransferCallConfig"];
+        };
+        /** UpdateCampaignRequest */
+        UpdateCampaignRequest: {
+            /** Name */
+            name?: string | null;
+            retry_config?: components["schemas"]["RetryConfigRequest"] | null;
+            /** Max Concurrency */
+            max_concurrency?: number | null;
+            schedule_config?: components["schemas"]["ScheduleConfigRequest"] | null;
+            circuit_breaker?: components["schemas"]["CircuitBreakerConfigRequest"] | null;
+        };
+        /**
+         * UpdateToolRequest
+         * @description Request schema for updating a tool.
+         */
+        UpdateToolRequest: {
+            /** Name */
+            name?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Icon */
+            icon?: string | null;
+            /** Icon Color */
+            icon_color?: string | null;
+            /** Definition */
+            definition?: (components["schemas"]["HttpApiToolDefinition"] | components["schemas"]["EndCallToolDefinition"] | components["schemas"]["TransferCallToolDefinition"] | components["schemas"]["CalculatorToolDefinition"]) | null;
+            /** Status */
+            status?: string | null;
         };
         /** UpdateWorkflowRequest */
         UpdateWorkflowRequest: {
@@ -745,6 +2243,23 @@ export interface components {
             /** Workflow Uuid */
             workflow_uuid?: string | null;
         };
+        /** WorkflowRunDetail */
+        WorkflowRunDetail: {
+            /** Phone Number */
+            phone_number: string;
+            /** Disposition */
+            disposition: string;
+            /** Duration Seconds */
+            duration_seconds: number;
+            /** Workflow Id */
+            workflow_id: number;
+            /** Run Id */
+            run_id: number;
+            /** Workflow Name */
+            workflow_name: string;
+            /** Created At */
+            created_at: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -752,30 +2267,75 @@ export interface components {
     headers: never;
     pathItems: never;
 }
+export type BatchRecordingCreateRequestSchema = components['schemas']['BatchRecordingCreateRequestSchema'];
+export type BatchRecordingCreateResponseSchema = components['schemas']['BatchRecordingCreateResponseSchema'];
+export type BatchRecordingUploadRequestSchema = components['schemas']['BatchRecordingUploadRequestSchema'];
+export type BatchRecordingUploadResponseSchema = components['schemas']['BatchRecordingUploadResponseSchema'];
+export type CalculatorToolDefinition = components['schemas']['CalculatorToolDefinition'];
 export type CallDispositionCodes = components['schemas']['CallDispositionCodes'];
+export type CampaignLogEntryResponse = components['schemas']['CampaignLogEntryResponse'];
+export type CampaignProgressResponse = components['schemas']['CampaignProgressResponse'];
+export type CampaignResponse = components['schemas']['CampaignResponse'];
+export type CampaignRunsResponse = components['schemas']['CampaignRunsResponse'];
+export type CampaignSourceDownloadResponse = components['schemas']['CampaignSourceDownloadResponse'];
+export type CampaignsResponse = components['schemas']['CampaignsResponse'];
+export type ChunkResponseSchema = components['schemas']['ChunkResponseSchema'];
+export type ChunkSearchRequestSchema = components['schemas']['ChunkSearchRequestSchema'];
+export type ChunkSearchResponseSchema = components['schemas']['ChunkSearchResponseSchema'];
+export type CircuitBreakerConfigRequest = components['schemas']['CircuitBreakerConfigRequest'];
+export type CircuitBreakerConfigResponse = components['schemas']['CircuitBreakerConfigResponse'];
+export type CreateCampaignRequest = components['schemas']['CreateCampaignRequest'];
+export type CreateToolRequest = components['schemas']['CreateToolRequest'];
 export type CreateWorkflowRequest = components['schemas']['CreateWorkflowRequest'];
 export type CreatedByResponse = components['schemas']['CreatedByResponse'];
 export type CredentialResponse = components['schemas']['CredentialResponse'];
+export type DailyReportResponse = components['schemas']['DailyReportResponse'];
 export type DisplayOptions = components['schemas']['DisplayOptions'];
 export type DocumentListResponseSchema = components['schemas']['DocumentListResponseSchema'];
 export type DocumentResponseSchema = components['schemas']['DocumentResponseSchema'];
+export type DocumentUploadRequestSchema = components['schemas']['DocumentUploadRequestSchema'];
+export type DocumentUploadResponseSchema = components['schemas']['DocumentUploadResponseSchema'];
+export type EmbedTokenRequest = components['schemas']['EmbedTokenRequest'];
+export type EmbedTokenResponse = components['schemas']['EmbedTokenResponse'];
+export type EndCallConfig = components['schemas']['EndCallConfig'];
+export type EndCallToolDefinition = components['schemas']['EndCallToolDefinition'];
+export type FileDescriptor = components['schemas']['FileDescriptor'];
 export type GraphConstraints = components['schemas']['GraphConstraints'];
 export type HttpValidationError = components['schemas']['HTTPValidationError'];
+export type HttpApiConfig = components['schemas']['HttpApiConfig'];
+export type HttpApiToolDefinition = components['schemas']['HttpApiToolDefinition'];
 export type InitiateCallRequest = components['schemas']['InitiateCallRequest'];
 export type NodeCategory = components['schemas']['NodeCategory'];
 export type NodeExample = components['schemas']['NodeExample'];
 export type NodeSpec = components['schemas']['NodeSpec'];
 export type NodeTypesResponse = components['schemas']['NodeTypesResponse'];
+export type ProcessDocumentRequestSchema = components['schemas']['ProcessDocumentRequestSchema'];
 export type PropertyOption = components['schemas']['PropertyOption'];
 export type PropertySpec = components['schemas']['PropertySpec'];
 export type PropertyType = components['schemas']['PropertyType'];
+export type RecordingCreateRequestSchema = components['schemas']['RecordingCreateRequestSchema'];
 export type RecordingListResponseSchema = components['schemas']['RecordingListResponseSchema'];
 export type RecordingResponseSchema = components['schemas']['RecordingResponseSchema'];
+export type RecordingUpdateRequestSchema = components['schemas']['RecordingUpdateRequestSchema'];
+export type RecordingUploadResponseSchema = components['schemas']['RecordingUploadResponseSchema'];
+export type RedialCampaignRequest = components['schemas']['RedialCampaignRequest'];
+export type RetryConfigRequest = components['schemas']['RetryConfigRequest'];
+export type RetryConfigResponse = components['schemas']['RetryConfigResponse'];
+export type ScheduleConfigRequest = components['schemas']['ScheduleConfigRequest'];
+export type ScheduleConfigResponse = components['schemas']['ScheduleConfigResponse'];
+export type TimeSlotRequest = components['schemas']['TimeSlotRequest'];
+export type TimeSlotResponse = components['schemas']['TimeSlotResponse'];
+export type ToolParameter = components['schemas']['ToolParameter'];
 export type ToolResponse = components['schemas']['ToolResponse'];
+export type TransferCallConfig = components['schemas']['TransferCallConfig'];
+export type TransferCallToolDefinition = components['schemas']['TransferCallToolDefinition'];
+export type UpdateCampaignRequest = components['schemas']['UpdateCampaignRequest'];
+export type UpdateToolRequest = components['schemas']['UpdateToolRequest'];
 export type UpdateWorkflowRequest = components['schemas']['UpdateWorkflowRequest'];
 export type ValidationError = components['schemas']['ValidationError'];
 export type WorkflowListResponse = components['schemas']['WorkflowListResponse'];
 export type WorkflowResponse = components['schemas']['WorkflowResponse'];
+export type WorkflowRunDetail = components['schemas']['WorkflowRunDetail'];
 export type $defs = Record<string, never>;
 export interface operations {
     initiate_call_api_v1_telephony_initiate_call_post: {
@@ -992,6 +2552,520 @@ export interface operations {
             };
         };
     };
+    create_campaign_api_v1_campaign_create_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCampaignRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_campaigns_api_v1_campaign__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignsResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_campaign_api_v1_campaign__campaign_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                campaign_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_campaign_api_v1_campaign__campaign_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                campaign_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCampaignRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_campaign_api_v1_campaign__campaign_id__start_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                campaign_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pause_campaign_api_v1_campaign__campaign_id__pause_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                campaign_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_campaign_runs_api_v1_campaign__campaign_id__runs_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                limit?: number;
+                /** @description JSON-encoded filter criteria */
+                filters?: string | null;
+                /** @description Field to sort by (e.g., 'duration', 'created_at') */
+                sort_by?: string | null;
+                /** @description Sort order ('asc' or 'desc') */
+                sort_order?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                campaign_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignRunsResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    redial_campaign_api_v1_campaign__campaign_id__redial_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                campaign_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RedialCampaignRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resume_campaign_api_v1_campaign__campaign_id__resume_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                campaign_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_campaign_progress_api_v1_campaign__campaign_id__progress_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                campaign_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignProgressResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_campaign_source_download_url_api_v1_campaign__campaign_id__source_download_url_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                campaign_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignSourceDownloadResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_campaign_report_api_v1_campaign__campaign_id__report_get: {
+        parameters: {
+            query?: {
+                /** @description Filter runs created on or after this datetime (ISO 8601) */
+                start_date?: string | null;
+                /** @description Filter runs created on or before this datetime (ISO 8601) */
+                end_date?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                campaign_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_credentials_api_v1_credentials__get: {
         parameters: {
             query?: never;
@@ -1073,6 +3147,526 @@ export interface operations {
             };
         };
     };
+    create_tool_api_v1_tools__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateToolRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ToolResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_tool_api_v1_tools__tool_uuid__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                tool_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ToolResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_tool_api_v1_tools__tool_uuid__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                tool_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateToolRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ToolResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_tool_api_v1_tools__tool_uuid__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                tool_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unarchive_tool_api_v1_tools__tool_uuid__unarchive_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                tool_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ToolResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_daily_report_api_v1_organizations_reports_daily_get: {
+        parameters: {
+            query: {
+                /** @description Date in YYYY-MM-DD format */
+                date: string;
+                /** @description IANA timezone (e.g., 'America/New_York') */
+                timezone: string;
+                /** @description Optional workflow ID to filter by */
+                workflow_id?: number | null;
+            };
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyReportResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_daily_runs_detail_api_v1_organizations_reports_daily_runs_get: {
+        parameters: {
+            query: {
+                /** @description Date in YYYY-MM-DD format */
+                date: string;
+                /** @description IANA timezone (e.g., 'America/New_York') */
+                timezone: string;
+                /** @description Optional workflow ID to filter by */
+                workflow_id?: number | null;
+            };
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowRunDetail"][];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_embed_token_api_v1_workflow__workflow_id__embed_token_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                workflow_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbedTokenResponse"] | null;
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_or_update_embed_token_api_v1_workflow__workflow_id__embed_token_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                workflow_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmbedTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbedTokenResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deactivate_embed_token_api_v1_workflow__workflow_id__embed_token_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                workflow_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_upload_url_api_v1_knowledge_base_upload_url_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentUploadRequestSchema"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentUploadResponseSchema"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    process_document_api_v1_knowledge_base_process_document_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProcessDocumentRequestSchema"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentResponseSchema"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_documents_api_v1_knowledge_base_documents_get: {
         parameters: {
             query?: {
@@ -1097,6 +3691,174 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DocumentListResponseSchema"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_document_api_v1_knowledge_base_documents__document_uuid__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                document_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentResponseSchema"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_document_api_v1_knowledge_base_documents__document_uuid__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                document_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_chunks_api_v1_knowledge_base_search_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChunkSearchRequestSchema"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChunkSearchResponseSchema"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_upload_urls_api_v1_workflow_recordings_upload_url_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BatchRecordingUploadRequestSchema"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchRecordingUploadResponseSchema"];
                 };
             };
             /** @description Not found */
@@ -1145,6 +3907,135 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecordingListResponseSchema"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_recordings_api_v1_workflow_recordings__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BatchRecordingCreateRequestSchema"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchRecordingCreateResponseSchema"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_recording_api_v1_workflow_recordings__recording_id__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                recording_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_recording_api_v1_workflow_recordings__id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+                "X-API-Key"?: string | null;
+            };
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordingUpdateRequestSchema"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordingResponseSchema"];
                 };
             };
             /** @description Not found */
