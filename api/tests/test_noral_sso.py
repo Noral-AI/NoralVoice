@@ -270,3 +270,60 @@ async def test_default_validate_url_when_env_unset(mock_httpx_client, mock_db_cl
     called_url = mock_httpx_client.get.await_args.args[0]
     assert called_url == DEFAULT_VALIDATE_URL
     assert "agent.noral.ai" in called_url
+
+
+# ===========================================================================
+# Integration with depends.py: SSO + local-auth fallback
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+async def test_depends_falls_back_to_local_auth_when_sso_returns_none(monkeypatch):
+    """When AUTH_PROVIDER=noral and SSO returns None (no cookie / expired /
+    agent.noral.ai unreachable), get_user falls through to local auth
+    instead of raising 401. Lets users with direct email/password creds
+    sign in even when SSO isn't usable."""
+    monkeypatch.setattr("api.services.auth.depends.AUTH_PROVIDER", "noral")
+
+    sso_mock = AsyncMock(return_value=None)
+    monkeypatch.setattr(
+        "api.services.auth.depends.get_user_from_noralos_session", sso_mock,
+    )
+
+    local_user = _fake_user(user_id=500, email="local@noral.ai")
+    local_mock = AsyncMock(return_value=local_user)
+    monkeypatch.setattr("api.services.auth.depends._handle_oss_auth", local_mock)
+
+    from api.services.auth.depends import get_user
+
+    result = await get_user(authorization="Bearer some-local-token", cookie=None)
+
+    assert result is local_user
+    sso_mock.assert_awaited_once_with(None)
+    local_mock.assert_awaited_once_with("Bearer some-local-token")
+
+
+@pytest.mark.asyncio
+async def test_depends_sso_takes_precedence_when_valid(monkeypatch):
+    """When SSO returns a user, local-auth fallback must NOT be called.
+    SSO is the preferred path; we only fall through on SSO failure."""
+    monkeypatch.setattr("api.services.auth.depends.AUTH_PROVIDER", "noral")
+
+    sso_user = _fake_user(user_id=600, email="sso@noral.ai")
+    sso_mock = AsyncMock(return_value=sso_user)
+    monkeypatch.setattr(
+        "api.services.auth.depends.get_user_from_noralos_session", sso_mock,
+    )
+
+    local_mock = AsyncMock()
+    monkeypatch.setattr("api.services.auth.depends._handle_oss_auth", local_mock)
+
+    from api.services.auth.depends import get_user
+
+    result = await get_user(
+        authorization="Bearer should-be-ignored",
+        cookie="noralos-default.session_token=valid",
+    )
+
+    assert result is sso_user
+    local_mock.assert_not_called()

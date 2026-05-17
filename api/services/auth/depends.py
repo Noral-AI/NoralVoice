@@ -31,18 +31,23 @@ async def get_user(
     # ------------------------------------------------------------------
     # Cross-product SSO: when AUTH_PROVIDER=noral, forward the inbound
     # Cookie header to agent.noral.ai's Better Auth session endpoint and
-    # find-or-create a local user from the result. Falls through to a 401
-    # if the cookie is missing/invalid OR if agent.noral.ai is
-    # unreachable — never silently auth-bypassing.
+    # find-or-create a local user from the result.
+    #
+    # If SSO succeeds → return that user.
+    # If SSO returns None (no cookie / expired / agent.noral.ai
+    # unreachable) → fall through to local-auth so users with a direct
+    # email/password account can still sign in. This is the "SSO +
+    # fallback" mode — covers the agent.noral.ai-is-down case AND lets
+    # users who never created a NoralOS account use their direct
+    # voice.noral.ai credential.
     # ------------------------------------------------------------------
     if AUTH_PROVIDER == "noral":
         sso_user = await get_user_from_noralos_session(cookie)
         if sso_user is not None:
             return sso_user
-        raise HTTPException(
-            status_code=401,
-            detail="No valid NoralOS session",
-        )
+        # Fall through: try local email/password as a fallback. If that
+        # also fails, _handle_oss_auth raises 401 with a clearer message.
+        return await _handle_oss_auth(authorization)
 
     # ------------------------------------------------------------------
     # Check if we're using local (email/password) auth
