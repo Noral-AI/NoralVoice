@@ -20,7 +20,7 @@ export async function GET() {
   const authProvider = await getAuthProvider();
 
   // Only handle OSS mode
-  if (authProvider !== 'local') {
+  if (authProvider !== 'local' && authProvider !== 'noral') {
     return NextResponse.json({ error: 'Not in OSS mode' }, { status: 400 });
   }
 
