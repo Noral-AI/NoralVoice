@@ -57,7 +57,7 @@ export async function getServerUser(): Promise<CurrentUser | LocalUser | null> {
         return null;
       }
     }
-  } else if (authProvider === 'local') {
+  } else if ((authProvider === 'local' || authProvider === 'noral')) {
     // For OSS mode, get user from cookies (created by middleware)
     const user = await getOSSUser();
     return user;
@@ -142,7 +142,7 @@ export async function getServerAccessToken(): Promise<string | null> {
       const auth = await user.getAuthJson();
       return auth?.accessToken ?? null;
     }
-  } else if (authProvider === 'local') {
+  } else if ((authProvider === 'local' || authProvider === 'noral')) {
     // Get token from cookies (created by middleware)
     const oss_token = await getOSSToken();
     logger.debug(`oss_token: ${oss_token}`);

@@ -15,7 +15,7 @@ export default async function Home() {
   logger.debug('[HomePage] Auth provider:', authProvider);
 
   // For local/OSS provider, check if user has workflows
-  if (authProvider === 'local') {
+  if ((authProvider === 'local' || authProvider === 'noral')) {
     logger.debug('[HomePage] Local provider detected, checking for workflows');
 
     try {

@@ -7,7 +7,7 @@ import { BackButton } from "./BackButton";
 export default async function Handler(props: unknown) {
   const authProvider = await getAuthProvider();
 
-  if (authProvider === "local") {
+  if ((authProvider === "local" || authProvider === "noral")) {
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
         <h1>Local Auth Mode</h1>
