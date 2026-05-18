@@ -24,8 +24,8 @@ BASE_LOG_DIR="$BASE_DIR/logs"
 LATEST_LINK="$BASE_LOG_DIR/latest"
 VENV_PATH="$BASE_DIR/venv"
 
-NGINX_UPSTREAM_TEMPLATE="$BASE_DIR/nginx/dograh_upstream.conf.template"
-NGINX_UPSTREAM_CONF="/etc/nginx/conf.d/dograh_upstream.conf"
+NGINX_UPSTREAM_TEMPLATE="$BASE_DIR/nginx/noral_upstream.conf.template"
+NGINX_UPSTREAM_CONF="/etc/nginx/conf.d/noral_upstream.conf"
 
 HEALTH_CHECK_ENDPOINT="/api/v1/health"
 

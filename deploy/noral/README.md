@@ -4,7 +4,7 @@ This directory tracks the customizations applied to the Dograh stack as
 deployed at `voice.noral.ai` (server: `129.121.101.154`).
 
 The upstream `docker-compose.yaml` in the repo root is left untouched so
-this fork can sync cleanly from `dograh-hq/dograh`. The deployed compose
+this fork can sync cleanly from `noral-hq/dograh`. The deployed compose
 lives here as a tracked snapshot.
 
 ## What changed vs. upstream
@@ -59,7 +59,7 @@ docker compose down   # stop (preserves volumes)
 ## If you ever rebuild from scratch
 
 `setup_remote.sh` in `prebuilt` mode downloads `docker-compose.yaml`
-directly from `dograh-hq/dograh@main`, so it will pull in the
+directly from `noral-hq/dograh@main`, so it will pull in the
 cloudflared service again. After a fresh `setup_remote.sh` run but
 before the first `./remote_up.sh`, apply our customizations:
 
@@ -83,7 +83,7 @@ should be reapplied if rebuilding the server:
 - **Docker CE** via the official `get.docker.com` script
 - **Let's Encrypt cert for `voice.noral.ai`** issued via `certbot certonly --standalone`,
   copied into `/root/NoralVoice/dograh/certs/local.{crt,key}`,
-  renewal hook at `/etc/letsencrypt/renewal-hooks/deploy/dograh-reload.sh`
+  renewal hook at `/etc/letsencrypt/renewal-hooks/deploy/noral-reload.sh`
 
 ## Secrets
 

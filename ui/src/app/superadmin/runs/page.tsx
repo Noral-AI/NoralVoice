@@ -500,8 +500,14 @@ export default function RunsPage() {
                                                                             op: 'and',
                                                                         }),
                                                                     );
+                                                                    const axiomOrg = process.env.NEXT_PUBLIC_AXIOM_ORG;
+                                                                    const axiomDataset = process.env.NEXT_PUBLIC_AXIOM_LOG_DATASET;
+                                                                    if (!axiomOrg || !axiomDataset) {
+                                                                        console.warn('Axiom not configured: set NEXT_PUBLIC_AXIOM_ORG and NEXT_PUBLIC_AXIOM_LOG_DATASET');
+                                                                        return;
+                                                                    }
                                                                     window.open(
-                                                                        `https://app.axiom.co/dograh-of6c/stream/${process.env.NEXT_PUBLIC_AXIOM_LOG_DATASET}?q=${query}`,
+                                                                        `https://app.axiom.co/${axiomOrg}/stream/${axiomDataset}?q=${query}`,
                                                                         '_blank',
                                                                     );
                                                                 }}

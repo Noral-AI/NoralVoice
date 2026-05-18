@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cut a release of both SDKs — dograh-sdk (PyPI) and @dograh/sdk (npm) —
+# Cut a release of both SDKs — noral-sdk (PyPI) and @dograh/sdk (npm) —
 # at the given version. Regenerates typed files from node_specs first so
 # a stale SDK can't ship.
 #
@@ -53,7 +53,7 @@ echo "  npm: logged in as $NPM_USER"
 echo "→ Regenerating typed SDK sources from node_specs..."
 ./scripts/generate_sdk.sh
 
-if ! git diff --quiet -- sdk/python/src/dograh_sdk/typed sdk/typescript/src/typed; then
+if ! git diff --quiet -- sdk/python/src/noral_sdk/typed sdk/typescript/src/typed; then
     echo
     echo "⚠  node_specs regeneration changed typed files. Review the diff"
     echo "   above and commit before releasing — otherwise the tag will"
@@ -104,14 +104,14 @@ echo "→ Building TypeScript + running tests..."
 
 echo
 echo "============================================================"
-echo "  Built dograh-sdk==$VERSION and @dograh/sdk@$VERSION"
+echo "  Built noral-sdk==$VERSION and @dograh/sdk@$VERSION"
 echo "  Nothing has been published yet."
 echo "============================================================"
 echo
 
-if confirm "Upload dograh-sdk==$VERSION to TestPyPI first (recommended)?"; then
+if confirm "Upload noral-sdk==$VERSION to TestPyPI first (recommended)?"; then
     (cd sdk/python && twine upload --repository testpypi dist/*)
-    echo "  → https://test.pypi.org/project/dograh-sdk/$VERSION/"
+    echo "  → https://test.pypi.org/project/noral-sdk/$VERSION/"
     echo
 fi
 
@@ -121,14 +121,14 @@ if confirm "Publish @dograh/sdk@$VERSION to npm? (will prompt for 2FA OTP)"; the
     echo
 fi
 
-if confirm "Upload dograh-sdk==$VERSION to PyPI?"; then
+if confirm "Upload noral-sdk==$VERSION to PyPI?"; then
     (cd sdk/python && twine upload dist/*)
-    echo "  → https://pypi.org/project/dograh-sdk/$VERSION/"
+    echo "  → https://pypi.org/project/noral-sdk/$VERSION/"
     echo
 fi
 
 if confirm "Create annotated git tag sdks-v$VERSION at HEAD?"; then
-    git tag -a "sdks-v$VERSION" -m "dograh-sdk + @dograh/sdk $VERSION"
+    git tag -a "sdks-v$VERSION" -m "noral-sdk + @dograh/sdk $VERSION"
     echo "  → created tag (not pushed). Push with:"
     echo "     git push origin sdks-v$VERSION"
 fi

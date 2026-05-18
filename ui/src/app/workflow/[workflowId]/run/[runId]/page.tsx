@@ -94,12 +94,6 @@ export default function WorkflowRunPage() {
         }
     }, [auth]);
 
-    // Shrink and reposition Chatwoot bubble on this page
-    useEffect(() => {
-        document.body.classList.add('chatwoot-compact');
-        return () => document.body.classList.remove('chatwoot-compact');
-    }, []);
-
     const { openPreview, dialog } = MediaPreviewDialog();
 
     useEffect(() => {
