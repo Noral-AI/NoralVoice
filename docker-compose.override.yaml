@@ -10,5 +10,7 @@ services:
       GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-}"
       GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:-}"
       GOOGLE_OAUTH_REDIRECT_URI: "${GOOGLE_OAUTH_REDIRECT_URI:-https://voice.noral.ai/api/v1/auth/google/callback}"
+      UI_APP_URL: "${UI_APP_URL:?required - was defaulting to http://localhost:3010}"
+      GOOGLE_OAUTH_POST_LOGIN_REDIRECT: "${GOOGLE_OAUTH_POST_LOGIN_REDIRECT:-https://voice.noral.ai/after-sign-in}"
   ui:
     image: noralvoice-ui:rebrand-v8
