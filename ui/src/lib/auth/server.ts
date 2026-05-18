@@ -87,6 +87,16 @@ export async function getOSSToken(): Promise<string | null> {
   );
 }
 
+
+// Decode Python http.cookies octal escapes (e.g. \054 -> ",") and
+// double-quote escapes (\" -> ") so JSON.parse can read the cookie.
+function decodeOctalEscapes(s: string): string {
+  return s
+    .replace(/\\([0-3][0-7][0-7])/g, (_m, oct) => String.fromCharCode(parseInt(oct, 8)))
+    .replace(/\\"/g, "\"")
+    .replace(/\\\\/g, "\\");
+}
+
 /**
  * Get OSS user from cookies
  */
@@ -98,7 +108,12 @@ export async function getOSSUser(): Promise<LocalUser | null> {
 
   if (userCookie) {
     try {
-      const parsed = JSON.parse(userCookie);
+      let parsed: any;
+      try {
+        parsed = JSON.parse(userCookie);
+      } catch {
+        parsed = JSON.parse(decodeOctalEscapes(userCookie));
+      }
       // Handle both legacy format and new JWT format
       return {
         id: String(parsed.id),

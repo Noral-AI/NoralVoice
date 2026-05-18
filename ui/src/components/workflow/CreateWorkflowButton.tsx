@@ -73,8 +73,18 @@ export function CreateWorkflowButton() {
                 },
             });
 
+            if (response.error) {
+                const detail = (response.error as { detail?: string })?.detail;
+                logger.error(`Error creating blank workflow: ${JSON.stringify(response.error)}`);
+                toast.error(typeof detail === 'string' ? detail : 'Failed to create workflow');
+                return;
+            }
+
             if (response.data?.id) {
                 router.push(`/workflow/${response.data.id}`);
+            } else {
+                logger.error(`Blank workflow created but no id returned: ${JSON.stringify(response.data)}`);
+                toast.error('Failed to create workflow (no id returned)');
             }
         } catch (err) {
             logger.error(`Error creating blank workflow: ${err}`);

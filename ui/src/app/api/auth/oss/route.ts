@@ -1,45 +1,59 @@
 /*
   Provides authentication token to LocalProviderWrapper once loaded
   in the browser.
-  Returns 401 if no token cookie exists (user needs to log in).
 */
-import { cookies } from 'next/headers';
-import { NextResponse } from 'next/server';
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 
-import { getAuthProvider } from '@/lib/auth/config';
+import { getAuthProvider } from "@/lib/auth/config";
 
-const OSS_TOKEN_COOKIE = 'noralvoice_auth_token';
-const OSS_USER_COOKIE = 'noralvoice_auth_user';
-// PHASE-5 COOKIE-MIGRATION — fall back to the legacy cookies so a
-// stale browser session keeps working through the dual-write window.
-// Remove in a follow-up.
-const LEGACY_OSS_TOKEN_COOKIE = 'dograh_auth_token';
-const LEGACY_OSS_USER_COOKIE = 'dograh_auth_user';
+const OSS_TOKEN_COOKIE = "noralvoice_auth_token";
+const OSS_USER_COOKIE = "noralvoice_auth_user";
+const LEGACY_OSS_TOKEN_COOKIE = "dograh_auth_token";
+const LEGACY_OSS_USER_COOKIE = "dograh_auth_user";
+
+// Decode Python http.cookies octal escapes (e.g. \054 -> ",") and
+// double-quote escapes (\" -> "). These are valid cookie escapes
+// produced by Starlette/FastAPI but are not valid JSON, so JSON.parse
+// fails unless we normalize them first.
+function decodeOctalEscapes(s: string): string {
+  return s
+    .replace(/\\([0-3][0-7][0-7])/g, (_m, oct) => String.fromCharCode(parseInt(oct, 8)))
+    .replace(/\\"/g, "\"")
+    .replace(/\\\\/g, "\\");
+}
 
 export async function GET() {
   const authProvider = await getAuthProvider();
 
-  // Only handle OSS mode
-  if (authProvider !== 'local' && authProvider !== 'noral') {
-    return NextResponse.json({ error: 'Not in OSS mode' }, { status: 400 });
+  if (authProvider !== "local" && authProvider !== "noral") {
+    return NextResponse.json({ error: "Not in OSS mode" }, { status: 400 });
   }
 
   const cookieStore = await cookies();
   const token =
     cookieStore.get(OSS_TOKEN_COOKIE)?.value ??
     cookieStore.get(LEGACY_OSS_TOKEN_COOKIE)?.value;
-  const user =
+  const userRaw =
     cookieStore.get(OSS_USER_COOKIE)?.value ??
     cookieStore.get(LEGACY_OSS_USER_COOKIE)?.value;
 
-  // If no token exists, return 401 (user needs to sign up or log in)
   if (!token) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  // Return the auth info as JSON
-  return NextResponse.json({
-    token,
-    user: user ? JSON.parse(user) : { id: token, name: 'Local User', provider: 'local' },
-  });
+  let user: unknown = { id: token, name: "Local User", provider: "local" };
+  if (userRaw) {
+    try {
+      user = JSON.parse(userRaw);
+    } catch {
+      try {
+        user = JSON.parse(decodeOctalEscapes(userRaw));
+      } catch {
+        // Fall through to placeholder user.
+      }
+    }
+  }
+
+  return NextResponse.json({ token, user });
 }
