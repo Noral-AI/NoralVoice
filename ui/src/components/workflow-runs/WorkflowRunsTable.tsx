@@ -1,14 +1,22 @@
 "use client";
 
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, ExternalLink, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { WorkflowRunResponseSchema } from "@/client/types.gen";
+import { ActedByBadge, hasExternalAttribution } from "@/components/attribution/ActedByBadge";
 import { FilterBuilder } from "@/components/filters/FilterBuilder";
 import { MediaPreviewButton, MediaPreviewDialog } from "@/components/MediaPreviewDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import {
     Table,
     TableBody,
@@ -58,6 +66,13 @@ export interface WorkflowRunsTableProps {
     emptyMessage?: string;
 }
 
+/**
+ * Phase 7.5 — three-way toggle on the run-history page. "external" =
+ * agent-driven runs (any NoralOS actor); "human" = direct-user runs.
+ */
+type ActedByFilter = "all" | "human" | "external";
+const ACTED_BY_FILTER_STORAGE_KEY = "noralvoice.workflow_runs.acted_by_filter";
+
 export function WorkflowRunsTable({
     runs,
     loading,
@@ -84,6 +99,32 @@ export function WorkflowRunsTable({
     emptyMessage = "No workflow runs found",
 }: WorkflowRunsTableProps) {
     const [selectedRowId, setSelectedRowId] = useState<number | null>(null);
+
+    // Phase 7.5 — "Acted by" filter. Persisted per-user in localStorage so
+    // the choice survives page reloads. Client-side filter over the
+    // server-paginated runs because the page already cursors through pages
+    // and a server-side filter would double the SQL surface for what's
+    // essentially a visualisation toggle. Acceptable trade-off: the count
+    // and pagination reflect server totals; the filter narrows what's
+    // visible on the current page only.
+    const [actedByFilter, setActedByFilter] = useState<ActedByFilter>("all");
+    useEffect(() => {
+        const stored = window.localStorage.getItem(ACTED_BY_FILTER_STORAGE_KEY);
+        if (stored === "human" || stored === "external") {
+            setActedByFilter(stored);
+        }
+    }, []);
+    useEffect(() => {
+        window.localStorage.setItem(ACTED_BY_FILTER_STORAGE_KEY, actedByFilter);
+    }, [actedByFilter]);
+
+    const visibleRuns = useMemo(() => {
+        if (actedByFilter === "all") return runs;
+        if (actedByFilter === "external") {
+            return runs.filter((r) => hasExternalAttribution(r.created_by_external));
+        }
+        return runs.filter((r) => !hasExternalAttribution(r.created_by_external));
+    }, [runs, actedByFilter]);
 
     // Media preview dialog
     const mediaPreview = MediaPreviewDialog();
@@ -132,20 +173,38 @@ export function WorkflowRunsTable({
                             <div>
                                 <CardTitle>Workflow Runs</CardTitle>
                                 <CardDescription>
-                                    {subtitle || `Showing ${runs.length} of ${totalCount} total runs`}
+                                    {subtitle ||
+                                        (actedByFilter === "all"
+                                            ? `Showing ${runs.length} of ${totalCount} total runs`
+                                            : `Showing ${visibleRuns.length} of ${runs.length} runs on this page (filtered)`)}
                                 </CardDescription>
                             </div>
-                            {onReload && (
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={onReload}
-                                    disabled={loading}
-                                    title="Reload"
+                            <div className="flex items-center gap-2">
+                                <Select
+                                    value={actedByFilter}
+                                    onValueChange={(v) => setActedByFilter(v as ActedByFilter)}
                                 >
-                                    <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                                </Button>
-                            )}
+                                    <SelectTrigger className="w-[180px]" aria-label="Filter by actor">
+                                        <SelectValue placeholder="Acted by" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Acted by: All</SelectItem>
+                                        <SelectItem value="human">Human users</SelectItem>
+                                        <SelectItem value="external">NoralOS agents</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                {onReload && (
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={onReload}
+                                        disabled={loading}
+                                        title="Reload"
+                                    >
+                                        <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -175,13 +234,22 @@ export function WorkflowRunsTable({
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {runs.map((run) => (
+                                    {visibleRuns.map((run) => (
                                         <TableRow
                                             key={run.id}
                                             className={`cursor-pointer hover:bg-muted/50 ${selectedRowId === run.id ? "bg-primary/20 ring-1 ring-primary/50" : ""}`}
                                             onClick={() => handleRowClick(run.id)}
                                         >
-                                            <TableCell className="font-mono text-sm">#{run.id}</TableCell>
+                                            <TableCell className="font-mono text-sm">
+                                                <div className="flex items-center gap-1.5">
+                                                    <span>#{run.id}</span>
+                                                    <ActedByBadge
+                                                        attribution={run.created_by_external}
+                                                        lastModified={run.last_modified_by_external}
+                                                        compact
+                                                    />
+                                                </div>
+                                            </TableCell>
                                             <TableCell>
                                                 <Badge variant={run.is_completed ? "default" : "secondary"}>
                                                     {run.is_completed ? "Completed" : "In Progress"}

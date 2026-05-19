@@ -4591,6 +4591,38 @@ export type WorkflowRunResponseSchema = {
     annotations?: {
         [key: string]: unknown;
     } | null;
+    /**
+     * Created By External — Phase 7.5 cross-system attribution.
+     * Null when the run was kicked off by a direct human action;
+     * populated when a NoralOS agent (or other integration) made the call.
+     */
+    created_by_external?: ExternalActorAttribution | null;
+    /**
+     * Last Modified By External — Phase 7.5 cross-system attribution.
+     */
+    last_modified_by_external?: ExternalActorAttribution | null;
+};
+
+/**
+ * ExternalActorAttribution — Phase 7.5 cross-system attribution for a row.
+ *
+ * All fields nullable; all-NULL means a direct human action through the
+ * NoralVoice UI / API. Populated by the actor middleware when a request
+ * arrives with `X-Noralos-Actor-*` headers.
+ */
+export type ExternalActorAttribution = {
+    /**
+     * Actor Id — UUID of the row in `external_actors`.
+     */
+    actor_id?: string | null;
+    /**
+     * Run Id — UUID of the originating NoralOS agent run.
+     */
+    run_id?: string | null;
+    /**
+     * Label — denormalised display string, e.g. "Voice Director (NoralOS)".
+     */
+    label?: string | null;
 };
 
 /**
