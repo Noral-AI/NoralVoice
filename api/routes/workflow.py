@@ -386,6 +386,7 @@ def _transform_schema_errors(
 
 @router.post(
     "/create/definition",
+    response_model=WorkflowResponse,
     **sdk_expose(
         method="create_workflow",
         description="Create a new workflow from a workflow definition.",
@@ -596,6 +597,7 @@ async def get_workflow_count(
 
 @router.get(
     "/fetch",
+    response_model=List[WorkflowListResponse],
     **sdk_expose(
         method="list_workflows",
         description="List all workflows in the authenticated organization.",
@@ -648,6 +650,7 @@ async def get_workflows(
 
 @router.get(
     "/fetch/{workflow_id}",
+    response_model=WorkflowResponse,
     **sdk_expose(
         method="get_workflow",
         description="Get a single workflow by ID (returns draft if one exists, else published).",
@@ -885,6 +888,7 @@ async def update_workflow_status(
 
 @router.put(
     "/{workflow_id}",
+    response_model=WorkflowResponse,
     **sdk_expose(
         method="update_workflow",
         description="Update a workflow's name and/or definition. Saves as a new draft.",

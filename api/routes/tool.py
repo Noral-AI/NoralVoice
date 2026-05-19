@@ -230,6 +230,11 @@ class ToolResponse(BaseModel):
         from_attributes = True
 
 
+class DeleteToolResponse(BaseModel):
+    status: str
+    tool_uuid: str
+
+
 def build_tool_response(tool, include_created_by: bool = False) -> ToolResponse:
     """Build a response from a tool model."""
     created_by = None
@@ -279,6 +284,7 @@ def validate_status(status: str) -> None:
 
 @router.get(
     "/",
+    response_model=List[ToolResponse],
     **sdk_expose(
         method="list_tools",
         description="List tools available to the authenticated organization.",
@@ -318,7 +324,7 @@ async def list_tools(
     return [build_tool_response(tool) for tool in tools]
 
 
-@router.post("/", **sdk_expose(method="create_tool", description="Create a new HTTP tool definition (workflow agents can invoke during calls)."))
+@router.post("/", response_model=ToolResponse, **sdk_expose(method="create_tool", description="Create a new HTTP tool definition (workflow agents can invoke during calls)."))
 async def create_tool(
     request: CreateToolRequest,
     user: UserModel = Depends(get_user),
@@ -363,7 +369,7 @@ async def create_tool(
     return build_tool_response(tool)
 
 
-@router.get("/{tool_uuid}", **sdk_expose(method="get_tool", description="Get a tool definition by UUID."))
+@router.get("/{tool_uuid}", response_model=ToolResponse, **sdk_expose(method="get_tool", description="Get a tool definition by UUID."))
 async def get_tool(
     tool_uuid: str,
     user: UserModel = Depends(get_user),
@@ -392,7 +398,7 @@ async def get_tool(
     return build_tool_response(tool, include_created_by=True)
 
 
-@router.put("/{tool_uuid}", **sdk_expose(method="update_tool", description="Update an existing tool definition."))
+@router.put("/{tool_uuid}", response_model=ToolResponse, **sdk_expose(method="update_tool", description="Update an existing tool definition."))
 async def update_tool(
     tool_uuid: str,
     request: UpdateToolRequest,
@@ -433,7 +439,7 @@ async def update_tool(
     return build_tool_response(tool, include_created_by=True)
 
 
-@router.delete("/{tool_uuid}", **sdk_expose(method="delete_tool", description="Soft-delete a tool definition."))
+@router.delete("/{tool_uuid}", response_model=DeleteToolResponse, **sdk_expose(method="delete_tool", description="Soft-delete a tool definition."))
 async def delete_tool(
     tool_uuid: str,
     user: UserModel = Depends(get_user),
@@ -457,10 +463,10 @@ async def delete_tool(
     if not deleted:
         raise HTTPException(status_code=404, detail="Tool not found")
 
-    return {"status": "archived", "tool_uuid": tool_uuid}
+    return DeleteToolResponse(status="archived", tool_uuid=tool_uuid)
 
 
-@router.post("/{tool_uuid}/unarchive", **sdk_expose(method="unarchive_tool", description="Restore a soft-deleted tool definition."))
+@router.post("/{tool_uuid}/unarchive", response_model=ToolResponse, **sdk_expose(method="unarchive_tool", description="Restore a soft-deleted tool definition."))
 async def unarchive_tool(
     tool_uuid: str,
     user: UserModel = Depends(get_user),

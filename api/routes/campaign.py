@@ -345,7 +345,7 @@ async def _get_telephony_configuration_name(
     return cfg.name if cfg else None
 
 
-@router.post("/create", **sdk_expose(method="create_campaign", description="Create a new outbound campaign."))
+@router.post("/create", response_model=CampaignResponse, **sdk_expose(method="create_campaign", description="Create a new outbound campaign."))
 async def create_campaign(
     request: CreateCampaignRequest,
     user: UserModel = Depends(get_user),
@@ -462,7 +462,7 @@ async def create_campaign(
     )
 
 
-@router.get("/", **sdk_expose(method="list_campaigns", description="List all campaigns in the organization."))
+@router.get("/", response_model=CampaignsResponse, **sdk_expose(method="list_campaigns", description="List all campaigns in the organization."))
 async def get_campaigns(
     user: UserModel = Depends(get_user),
 ) -> CampaignsResponse:
@@ -503,7 +503,7 @@ async def get_campaigns(
     return CampaignsResponse(campaigns=campaign_responses)
 
 
-@router.get("/{campaign_id}", **sdk_expose(method="get_campaign", description="Get a campaign by id."))
+@router.get("/{campaign_id}", response_model=CampaignResponse, **sdk_expose(method="get_campaign", description="Get a campaign by id."))
 async def get_campaign(
     campaign_id: int,
     user: UserModel = Depends(get_user),
@@ -528,7 +528,7 @@ async def get_campaign(
     )
 
 
-@router.post("/{campaign_id}/start", **sdk_expose(method="start_campaign", description="Start a campaign run."))
+@router.post("/{campaign_id}/start", response_model=CampaignResponse, **sdk_expose(method="start_campaign", description="Start a campaign run."))
 async def start_campaign(
     campaign_id: int,
     user: UserModel = Depends(get_user),
@@ -578,7 +578,7 @@ async def start_campaign(
     )
 
 
-@router.post("/{campaign_id}/pause", **sdk_expose(method="pause_campaign", description="Pause an in-progress campaign run."))
+@router.post("/{campaign_id}/pause", response_model=CampaignResponse, **sdk_expose(method="pause_campaign", description="Pause an in-progress campaign run."))
 async def pause_campaign(
     campaign_id: int,
     user: UserModel = Depends(get_user),
@@ -612,7 +612,7 @@ async def pause_campaign(
     )
 
 
-@router.patch("/{campaign_id}", **sdk_expose(method="update_campaign", description="Update mutable fields on a campaign."))
+@router.patch("/{campaign_id}", response_model=CampaignResponse, **sdk_expose(method="update_campaign", description="Update mutable fields on a campaign."))
 async def update_campaign(
     campaign_id: int,
     request: UpdateCampaignRequest,
@@ -682,7 +682,7 @@ async def update_campaign(
     )
 
 
-@router.get("/{campaign_id}/runs", **sdk_expose(method="list_campaign_runs", description="List runs (one per dialed lead) for a campaign."))
+@router.get("/{campaign_id}/runs", response_model=CampaignRunsResponse, **sdk_expose(method="list_campaign_runs", description="List runs (one per dialed lead) for a campaign."))
 async def get_campaign_runs(
     campaign_id: int,
     page: int = 1,
@@ -767,7 +767,7 @@ class RedialCampaignRequest(BaseModel):
         return self
 
 
-@router.post("/{campaign_id}/redial", **sdk_expose(method="redial_campaign", description="Re-attempt unanswered or failed calls in a campaign."))
+@router.post("/{campaign_id}/redial", response_model=CampaignResponse, **sdk_expose(method="redial_campaign", description="Re-attempt unanswered or failed calls in a campaign."))
 async def redial_campaign(
     campaign_id: int,
     request: RedialCampaignRequest,
@@ -850,7 +850,7 @@ async def redial_campaign(
     )
 
 
-@router.post("/{campaign_id}/resume", **sdk_expose(method="resume_campaign", description="Resume a paused campaign run."))
+@router.post("/{campaign_id}/resume", response_model=CampaignResponse, **sdk_expose(method="resume_campaign", description="Resume a paused campaign run."))
 async def resume_campaign(
     campaign_id: int,
     user: UserModel = Depends(get_user),
@@ -900,7 +900,7 @@ async def resume_campaign(
     )
 
 
-@router.get("/{campaign_id}/progress", **sdk_expose(method="get_campaign_progress", description="Get aggregate progress (calls placed, completed, success rate)."))
+@router.get("/{campaign_id}/progress", response_model=CampaignProgressResponse, **sdk_expose(method="get_campaign_progress", description="Get aggregate progress (calls placed, completed, success rate)."))
 async def get_campaign_progress(
     campaign_id: int,
     user: UserModel = Depends(get_user),
@@ -924,7 +924,7 @@ class CampaignSourceDownloadResponse(BaseModel):
     expires_in: int
 
 
-@router.get("/{campaign_id}/source-download-url", **sdk_expose(method="get_campaign_source_url", description="Get a pre-signed URL to download the campaign's source CSV."))
+@router.get("/{campaign_id}/source-download-url", response_model=CampaignSourceDownloadResponse, **sdk_expose(method="get_campaign_source_url", description="Get a pre-signed URL to download the campaign's source CSV."))
 async def get_campaign_source_download_url(
     campaign_id: int,
     user: UserModel = Depends(get_user),
@@ -975,7 +975,11 @@ async def get_campaign_source_download_url(
         )
 
 
-@router.get("/{campaign_id}/report", **sdk_expose(method="get_campaign_report", description="Download a CSV report of campaign outcomes."))
+@router.get(
+    "/{campaign_id}/report",
+    responses={200: {"content": {"text/csv": {}}, "description": "CSV download of campaign run outcomes."}},
+    **sdk_expose(method="get_campaign_report", description="Download a CSV report of campaign outcomes."),
+)
 async def download_campaign_report(
     campaign_id: int,
     user: UserModel = Depends(get_user),

@@ -23,8 +23,14 @@ from api.sdk_expose import sdk_expose
 from api.services.auth.depends import get_user
 from api.services.mps_service_key_client import mps_service_key_client
 from api.services.storage import storage_fs
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/workflow-recordings", tags=["workflow-recordings"])
+
+
+class DeleteRecordingResponse(BaseModel):
+    success: bool
+    message: str
 
 
 async def _generate_unique_recording_id(organization_id: int) -> str:
@@ -212,6 +218,7 @@ async def list_recordings(
 
 @router.delete(
     "/{recording_id}",
+    response_model=DeleteRecordingResponse,
     summary="Delete a recording",
     **sdk_expose(method="delete_recording", description="Soft-delete a recording."),
 )
@@ -233,7 +240,7 @@ async def delete_recording(
             f"Deleted recording {recording_id}, org {user.selected_organization_id}"
         )
 
-        return {"success": True, "message": "Recording deleted successfully"}
+        return DeleteRecordingResponse(success=True, message="Recording deleted successfully")
 
     except HTTPException:
         raise
