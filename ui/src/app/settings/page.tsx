@@ -1,7 +1,5 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
-
 import { MCPSection } from "@/components/MCPSection";
 import { TelemetrySection } from "@/components/TelemetrySection";
 import {
@@ -27,16 +25,7 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle>MCP Server</CardTitle>
             <CardDescription>
-              Let AI agents access your Dograh workspace and documentation via
-              the Model Context Protocol.{" "}
-              <a
-                href="https://docs.dograh.com/integrations/mcp"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-0.5 underline"
-              >
-                Learn more <ExternalLink className="h-3 w-3" />
-              </a>
+              Let AI agents access your workspace via the Model Context Protocol.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -48,15 +37,7 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle>Telemetry</CardTitle>
             <CardDescription>
-              Configure Langfuse tracing for your voice agent calls.{" "}
-              <a
-                href="https://docs.dograh.com/configurations/tracing"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-0.5 underline"
-              >
-                Learn more <ExternalLink className="h-3 w-3" />
-              </a>
+              Configure Langfuse tracing for your voice agent calls.
             </CardDescription>
           </CardHeader>
           <CardContent>
