@@ -4,9 +4,12 @@ from pydantic import BaseModel
 
 from api.routes.agent_stream import router as agent_stream_router
 from api.routes.auth import router as auth_router
+from api.routes.auth_google import router as auth_google_router
 from api.routes.campaign import router as campaign_router
 from api.routes.credentials import router as credentials_router
+from api.routes.embed import router as embed_router
 from api.routes.integration import router as integration_router
+from api.routes.integration_webhooks import router as integration_webhooks_router
 from api.routes.knowledge_base import router as knowledge_base_router
 from api.routes.looptalk import router as looptalk_router
 from api.routes.node_types import router as node_types_router
@@ -41,6 +44,7 @@ router.include_router(campaign_router)
 router.include_router(credentials_router)
 router.include_router(tool_router)
 router.include_router(integration_router)
+router.include_router(integration_webhooks_router)
 router.include_router(organization_router)
 router.include_router(s3_router)
 router.include_router(service_keys_router)
@@ -50,12 +54,14 @@ router.include_router(reports_router)
 router.include_router(webrtc_signaling_router)
 router.include_router(turn_credentials_router)
 router.include_router(public_embed_router)
+router.include_router(embed_router)
 router.include_router(public_agent_router)
 router.include_router(public_download_router)
 router.include_router(workflow_embed_router)
 router.include_router(knowledge_base_router)
 router.include_router(workflow_recording_router)
 router.include_router(auth_router)
+router.include_router(auth_google_router)
 router.include_router(node_types_router)
 router.include_router(agent_stream_router)
 
@@ -68,6 +74,7 @@ class HealthResponse(BaseModel):
     auth_provider: str
     turn_enabled: bool
     force_turn_relay: bool
+    google_oauth_enabled: bool
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -77,12 +84,21 @@ async def health() -> HealthResponse:
         AUTH_PROVIDER,
         DEPLOYMENT_MODE,
         FORCE_TURN_RELAY,
+        GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_SECRET,
+        GOOGLE_OAUTH_ENABLED,
         TURN_SECRET,
     )
     from api.utils.common import get_backend_endpoints
 
     logger.debug("Health endpoint called")
     backend_endpoint, _ = await get_backend_endpoints()
+    # Only report the button as enabled if the flag AND credentials are
+    # set. Mirrors _require_enabled() in google_oauth.py so the UI hides
+    # buttons that would 503 on click.
+    google_oauth_ready = bool(
+        GOOGLE_OAUTH_ENABLED and GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET
+    )
     return HealthResponse(
         status="ok",
         version=APP_VERSION,
@@ -91,4 +107,5 @@ async def health() -> HealthResponse:
         auth_provider=AUTH_PROVIDER,
         turn_enabled=bool(TURN_SECRET),
         force_turn_relay=FORCE_TURN_RELAY,
+        google_oauth_enabled=google_oauth_ready,
     )

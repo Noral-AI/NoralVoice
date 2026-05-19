@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { ArrowLeft, BookA, Brain, CalendarIcon, Clipboard, Download, ExternalLink, FileDown, Fingerprint, Loader2, Mic, Pause, PhoneOff, Play, Rocket, Settings, Trash2Icon, Upload, Variable, X } from "lucide-react";
+import { ArrowLeft, BookA, Brain, CalendarIcon, Clipboard, Download, ExternalLink, FileDown, Fingerprint, Loader2, Mic, Pause, PhoneOff, Play, Settings, Trash2Icon, Upload, Variable, X } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -37,7 +37,6 @@ import {
     type WorkflowConfigurations,
 } from "@/types/workflow-configurations";
 
-import { EmbedDialog } from "../components/EmbedDialog";
 import { useWorkflowState } from "../hooks/useWorkflowState";
 
 // ---------------------------------------------------------------------------
@@ -79,7 +78,6 @@ const NAV_ITEMS = [
     { id: "dictionary", label: "Dictionary", icon: BookA },
     { id: "voicemail", label: "Voicemail Detection", icon: PhoneOff },
     { id: "recordings", label: "Recordings", icon: Mic },
-    { id: "deployment", label: "Add to Website", icon: Rocket },
     { id: "report", label: "Report", icon: FileDown },
     { id: "identity", label: "Agent UUID", icon: Fingerprint },
 ];
@@ -1125,7 +1123,6 @@ function WorkflowSettingsInner({
     const router = useRouter();
     const { dirtySections, confirmNavigate } = useUnsavedChangesContext();
 
-    const [isEmbedDialogOpen, setIsEmbedDialogOpen] = useState(false);
     const [activeSection, setActiveSection] = useState("general");
 
     const workflowId = workflow.id;
@@ -1289,25 +1286,6 @@ function WorkflowSettingsInner({
                                 </CardFooter>
                             </Card>
 
-                            {/* Deployment (dialog trigger) */}
-                            <Card id="deployment">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2 text-base">
-                                        <Rocket className="h-4 w-4" />
-                                        Add to Website
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Configure a widget to add this voice agent to your website.{" "}
-                                        <a href={SETTINGS_DOCUMENTATION_URLS.deployment} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">Learn more <ExternalLink className="h-3 w-3" /></a>
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardFooter className="border-t pt-6">
-                                    <Button variant="outline" onClick={() => setIsEmbedDialogOpen(true)}>
-                                        Configure Widget
-                                    </Button>
-                                </CardFooter>
-                            </Card>
-
                             {/* Report */}
                             <ReportSection workflowId={workflowId} />
 
@@ -1345,13 +1323,6 @@ function WorkflowSettingsInner({
                 </nav>
             </div>
 
-            {/* Dialogs for complex sections */}
-            <EmbedDialog
-                open={isEmbedDialogOpen}
-                onOpenChange={setIsEmbedDialogOpen}
-                workflowId={workflowId}
-                workflowName={workflowName || workflow.name}
-            />
         </div>
     );
 }

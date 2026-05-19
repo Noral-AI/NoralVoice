@@ -40,7 +40,7 @@ export default function DocumentUpload({ onUploadSuccess }: DocumentUploadProps)
         <p className="font-medium">Processed by an external service</p>
         <p className="mt-1">
           Uploaded documents are sent to a managed Model Proxy Service for
-          parsing and chunking. The Model Proxy Service does not store or read your documents -
+          parsing and chunking. The service does not store or read your documents —
           the extracted text and embeddings are returned and stored locally in your
           self-hosted database.
         </p>

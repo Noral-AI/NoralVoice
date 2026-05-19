@@ -4,26 +4,25 @@ import type { Team } from "@stackframe/stack";
 import {
   AlertTriangle,
   AudioLines,
-  Brain,
   ChevronLeft,
   ChevronRight,
-  CircleDollarSign,
   Database,
   FileText,
   Home,
-  Key,
   LogOut,
   type LucideIcon,
   Megaphone,
-  Phone,
   Settings,
+  ShieldCheck,
   TrendingUp,
   Workflow,
   Wrench,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+
+import { getAuthUserApiV1UserAuthUserGet } from "@/client/sdk.gen";
 
 import ThemeToggle from "@/components/ThemeSwitcher";
 import { Button } from "@/components/ui/button";
@@ -52,6 +51,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAppConfig } from "@/context/AppConfigContext";
 import { useTelephonyConfigWarnings } from "@/context/TelephonyConfigWarningsContext";
+import { useLatestReleaseVersion } from "@/hooks/useLatestReleaseVersion";
 import type { LocalUser } from "@/lib/auth";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -71,6 +71,11 @@ type SidebarNavSection = {
 const TELEPHONY_WARNING_DEADLINE = "15 May 2026";
 const TELEPHONY_WARNING_COPY = `Action required before ${TELEPHONY_WARNING_DEADLINE}`;
 
+// Phase 5a — settings consolidation. The BUILD section drops "Models",
+// "Telephony", and "Developers" (now tabs under /settings). A new
+// top-level "Settings" link replaces those entry points; the Telephony-
+// missing-webhook warning rides along on the Settings link so operators
+// still see the warning dot without us reviving the dropped item.
 const NAV_SECTIONS: SidebarNavSection[] = [
   {
     items: [
@@ -95,17 +100,6 @@ const NAV_SECTIONS: SidebarNavSection[] = [
         icon: Megaphone,
       },
       {
-        title: "Models",
-        url: "/model-configurations",
-        icon: Brain,
-      },
-      {
-        title: "Telephony",
-        url: "/telephony-configurations",
-        icon: Phone,
-        showsTelephonyWarning: true,
-      },
-      {
         title: "Tools",
         url: "/tools",
         icon: Wrench,
@@ -120,11 +114,6 @@ const NAV_SECTIONS: SidebarNavSection[] = [
         url: "/recordings",
         icon: AudioLines,
       },
-      {
-        title: "Developers",
-        url: "/api-keys",
-        icon: Key,
-      },
     ],
   },
   {
@@ -132,13 +121,23 @@ const NAV_SECTIONS: SidebarNavSection[] = [
     items: [
       {
         title: "Agent Runs",
-        url: "/usage",
+        url: "/settings?tab=usage-billing",
         icon: TrendingUp,
       },
       {
         title: "Reports",
         url: "/reports",
         icon: FileText,
+      },
+    ],
+  },
+  {
+    items: [
+      {
+        title: "Settings",
+        url: "/settings",
+        icon: Settings,
+        showsTelephonyWarning: true,
       },
     ],
   },
@@ -173,6 +172,34 @@ export function AppSidebar() {
 
   // Version info from app config context
   const versionInfo = config ? { ui: config.uiVersion, api: config.apiVersion } : null;
+
+  // Upstream release-check disabled in this fork; we manage releases internally.
+  useLatestReleaseVersion(versionInfo?.ui, { enabled: false });
+
+  // Phase 5c: surface Superadmin in the user dropdown for superusers only.
+  // /superadmin is server-gated; this flag drives visibility only. We fetch
+  // the auth user separately because LocalUser/CurrentUser don't carry the
+  // flag and the server is the source of truth.
+  const [isSuperuser, setIsSuperuser] = useState(false);
+  useEffect(() => {
+    if (!user) {
+      setIsSuperuser(false);
+      return;
+    }
+    let cancelled = false;
+    getAuthUserApiV1UserAuthUserGet()
+      .then((res) => {
+        if (!cancelled) {
+          setIsSuperuser(Boolean(res.data?.is_superuser));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setIsSuperuser(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const isActive = (path: string) => pathname.startsWith(path);
 
@@ -254,10 +281,20 @@ export function AppSidebar() {
           <div className={cn("flex items-center gap-2", isCollapsed && "hidden")}>
             <Link
               href="/"
-              className="notranslate flex items-center gap-2 px-2 text-xl font-bold"
+              aria-label="NoralVoice home"
+              className="notranslate flex items-center gap-2 px-2"
               translate="no"
             >
-              Noral Voice
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/brand/noralai-symbol-bare.svg"
+                alt=""
+                aria-hidden="true"
+                className="h-7 w-7 shrink-0"
+              />
+              <span className="text-xl font-extrabold tracking-tight">
+                noral<span className="text-primary">Voice</span>
+              </span>
               {versionInfo && (
                 <span
                   className="notranslate text-xs font-normal text-muted-foreground"
@@ -354,10 +391,14 @@ export function AppSidebar() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => router.push("/settings")} className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Platform Settings
-                  </DropdownMenuItem>
+                  {/* Phase 5a: Platform Settings + Usage moved into the top-level
+                      Settings sidebar item (with /settings?tab=...). */}
+                  {isSuperuser && (
+                    <DropdownMenuItem onClick={() => router.push("/superadmin")} className="cursor-pointer">
+                      <ShieldCheck className="mr-2 h-4 w-4" />
+                      Superadmin
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={() => logout()} className="cursor-pointer">
                     <LogOut className="mr-2 h-4 w-4" />
                     Sign out
@@ -399,14 +440,14 @@ export function AppSidebar() {
                     <Settings className="mr-2 h-4 w-4" />
                     Account settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push("/settings")} className="cursor-pointer">
-                    <Settings className="mr-2 h-4 w-4" />
-                    Platform Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push("/usage")} className="cursor-pointer">
-                    <CircleDollarSign className="mr-2 h-4 w-4" />
-                    Usage
-                  </DropdownMenuItem>
+                  {/* Phase 5a: Platform Settings + Usage moved into the top-level
+                      Settings sidebar item (with /settings?tab=...). */}
+                  {isSuperuser && (
+                    <DropdownMenuItem onClick={() => router.push("/superadmin")} className="cursor-pointer">
+                      <ShieldCheck className="mr-2 h-4 w-4" />
+                      Superadmin
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={() => logout()} className="cursor-pointer">
                     <LogOut className="mr-2 h-4 w-4" />
                     Sign out

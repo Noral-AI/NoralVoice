@@ -1,4 +1,7 @@
-const DOCS_BASE = "";
+// Placeholder for NoralAI's documentation site. Until docs.noral.ai is published,
+// these "Learn more" links will 404. Replace with the real base URL when docs exist,
+// or sweep all DOCS_BASE consumers and remove the anchors entirely.
+const DOCS_BASE = "https://docs.noral.ai";
 
 export const NODE_DOCUMENTATION_URLS: Record<string, string> = {
     startCall: `${DOCS_BASE}/voice-agent/start-call`,

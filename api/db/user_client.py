@@ -187,3 +187,24 @@ class UserClient(BaseDBClient):
             await session.commit()
             await session.refresh(user)
             return user
+
+    async def create_user_with_provider(
+        self, email: str, provider_id: str
+    ) -> UserModel:
+        """Create a new user with an explicit provider_id and email, no password.
+
+        Used by federated-identity flows (Google OAuth, future SAML/OIDC) where
+        the user is identified by an external provider's stable id rather than
+        an OSS-generated one. password_hash stays NULL — these users can only
+        sign in via the federated provider, not via /auth/login.
+        """
+        async with self.async_session() as session:
+            user = UserModel(
+                provider_id=provider_id,
+                email=email,
+                password_hash=None,
+            )
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
+            return user

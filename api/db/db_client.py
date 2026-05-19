@@ -1,8 +1,10 @@
 from api.db.agent_trigger_client import AgentTriggerClient
 from api.db.api_key_client import APIKeyClient
 from api.db.campaign_client import CampaignClient
+from api.db.embed_exchange_token_client import EmbedExchangeTokenClient
 from api.db.embed_token_client import EmbedTokenClient
 from api.db.integration_client import IntegrationClient
+from api.db.integration_webhook_client import IntegrationWebhookClient
 from api.db.knowledge_base_client import KnowledgeBaseClient
 from api.db.looptalk_client import LoopTalkClient
 from api.db.organization_client import OrganizationClient
@@ -34,6 +36,8 @@ class DBClient(
     ReportsClient,
     APIKeyClient,
     EmbedTokenClient,
+    EmbedExchangeTokenClient,
+    IntegrationWebhookClient,
     AgentTriggerClient,
     WebhookCredentialClient,
     ToolClient,

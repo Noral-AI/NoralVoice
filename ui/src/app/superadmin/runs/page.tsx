@@ -501,7 +501,7 @@ export default function RunsPage() {
                                                                         }),
                                                                     );
                                                                     window.open(
-                                                                        `https://app.axiom.co/${process.env.NEXT_PUBLIC_AXIOM_ORG_SLUG}/stream/${process.env.NEXT_PUBLIC_AXIOM_LOG_DATASET}?q=${query}`,
+                                                                        `${process.env.NEXT_PUBLIC_AXIOM_ORG_BASE_URL ?? "https://app.axiom.co"}/stream/${process.env.NEXT_PUBLIC_AXIOM_LOG_DATASET}?q=${query}`,
                                                                         '_blank',
                                                                     );
                                                                 }}

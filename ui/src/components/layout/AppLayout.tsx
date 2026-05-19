@@ -19,8 +19,20 @@ function AppHeader() {
         <Button variant="ghost" size="icon" onClick={toggleSidebar} aria-label="Open menu" className="md:hidden">
           <Menu className="h-5 w-5" />
         </Button>
-        <Link href="/" className="text-lg font-bold md:hidden">Noral Voice</Link>
+        <Link
+          href="/"
+          aria-label="NoralVoice home"
+          className="flex items-center gap-2 md:hidden notranslate"
+          translate="no"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/noralai-symbol-bare.svg" alt="" aria-hidden="true" className="h-6 w-6" />
+          <span className="text-lg font-extrabold tracking-tight">
+            noral<span className="text-primary">Voice</span>
+          </span>
+        </Link>
       </div>
+      <div className="flex items-center gap-3" />
     </header>
   );
 }

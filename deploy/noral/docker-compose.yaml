@@ -1,5 +1,6 @@
 services:
   postgres:
+    container_name: noralvoice-postgres
     image: pgvector/pgvector:pg17
     environment:
       POSTGRES_USER: postgres
@@ -23,6 +24,7 @@ services:
       - app-network
 
   redis:
+    container_name: noralvoice-redis
     image: redis:7
     ports:
       - "6379:6379"
@@ -59,9 +61,9 @@ services:
     networks:
       - app-network
 
-  dograh-init:
+  noral-init:
     image: bash:5.2
-    container_name: dograh_init
+    container_name: noralvoice-init
     profiles: ["remote", "local-turn"]
     environment:
       ENVIRONMENT: "${ENVIRONMENT:-local}"
@@ -80,14 +82,14 @@ services:
       - nginx-generated:/generated/nginx
       - coturn-generated:/generated/coturn
     command:
-      - /workspace/scripts/run_dograh_init.sh
+      - /workspace/scripts/run_init.sh
 
   nginx:
     image: nginx:alpine
     container_name: nginx_https
     profiles: ["remote"]
     depends_on:
-      dograh-init:
+      noral-init:
         condition: service_completed_successfully
       ui:
         condition: service_started
@@ -106,7 +108,7 @@ services:
     restart: unless-stopped
     profiles: ["remote", "local-turn"]
     depends_on:
-      dograh-init:
+      noral-init:
         condition: service_completed_successfully
     ports:
       - "3478:3478/udp"
@@ -123,7 +125,8 @@ services:
       - app-network
 
   api:
-    image: ${REGISTRY:-dograhai}/dograh-api:latest
+    container_name: noralvoice-api
+    image: ${REGISTRY:-noralai}/noral-api:latest
     volumes:
       - shared-tmp:/tmp
     environment:
@@ -134,6 +137,13 @@ services:
       # Replace this environment variable if you are using a custom
       # domain to host the stack
       BACKEND_API_ENDPOINT: "${BACKEND_API_ENDPOINT:-http://localhost:8000}"
+
+      # CORS allow-list — comma-separated origins. Wildcards combined
+      # with credentialed requests are rejected by browsers and unsafe,
+      # so this must be an explicit list. Production typically wants
+      # voice.noral.ai (UI) plus agent.noral.ai once the NoralOS plugin
+      # consumes the API.
+      CORS_ALLOWED_ORIGINS: "${CORS_ALLOWED_ORIGINS:-https://voice.noral.ai}"
 
       # Database configuration (using containerized postgres)
       DATABASE_URL: "postgresql+asyncpg://postgres:postgres@postgres:5432/postgres"
@@ -156,7 +166,7 @@ services:
       MINIO_SECURE: "false"
 
       # Number of uvicorn worker processes (each is its own process bound to a
-      # distinct port starting at 8000). dograh-init renders nginx upstreams
+      # distinct port starting at 8000). noral-init renders nginx upstreams
       # from this value and nginx load-balances across them with least_conn.
       FASTAPI_WORKERS: "${FASTAPI_WORKERS:-1}"
 
@@ -175,10 +185,10 @@ services:
 
       OSS_JWT_SECRET: "${OSS_JWT_SECRET:-ChangeMeInProduction}"
 
-      # Telemetry
-      ENABLE_TELEMETRY: "${ENABLE_TELEMETRY:-true}"
-      POSTHOG_API_KEY: "phc_ItizB1dP6yv7ZYobbcqrpxTdbomDA8hJFSEmAMdYvIr"
-      POSTHOG_HOST: "https://us.i.posthog.com"
+      # Telemetry — leave POSTHOG_API_KEY unset to disable analytics
+      ENABLE_TELEMETRY: "${ENABLE_TELEMETRY:-false}"
+      POSTHOG_API_KEY: "${POSTHOG_API_KEY:-}"
+      POSTHOG_HOST: "${POSTHOG_HOST:-https://us.i.posthog.com}"
 
     ports:
       - "8000:8000"
@@ -203,18 +213,19 @@ services:
       - app-network
 
   ui:
-    image: ${REGISTRY:-dograhai}/dograh-ui:latest
+    container_name: noralvoice-ui
+    image: ${REGISTRY:-noralai}/noral-ui:latest
     environment:
       HOSTNAME: "0.0.0.0"
       # Server-side URL (SSR, internal Docker network)
       BACKEND_URL: "${BACKEND_URL:-http://api:8000}"
       NODE_ENV: "oss"
-      # Flag to enable/ disable posthog
-      ENABLE_TELEMETRY: "${ENABLE_TELEMETRY:-true}"
+      # Flag to enable/disable posthog (leave POSTHOG_KEY unset to disable)
+      ENABLE_TELEMETRY: "${ENABLE_TELEMETRY:-false}"
 
       # Posthog
-      POSTHOG_KEY: "phc_ItizB1dP6yv7ZYobbcqrpxTdbomDA8hJFSEmAMdYvIr"
-      POSTHOG_HOST: "https://us.posthog.com"
+      POSTHOG_KEY: "${POSTHOG_KEY:-}"
+      POSTHOG_HOST: "${POSTHOG_HOST:-https://us.posthog.com}"
     ports:
       - "3010:3010"
     depends_on:

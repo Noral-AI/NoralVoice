@@ -1,30 +1,32 @@
 #!/usr/bin/env bash
-# Cut a release of both SDKs — dograh-sdk (PyPI) and @dograh/sdk (npm) —
-# at the given version. Regenerates typed files from node_specs first so
-# a stale SDK can't ship.
+# Cut a release of the NoralVoice SDKs at the given version.
+#
+# Ships two packages from this one script:
+#
+#   - noralai-voice       (PyPI)
+#   - @noralai/voice-sdk  (npm)
 #
 # Usage:
-#   ./scripts/release_sdks.sh 0.1.2
+#   ./scripts/release_sdks.sh 0.2.0
 #
-# Prerequisites (one-time setup):
-#   - `build` + `twine` installed: `pip install --upgrade build twine`
-#   - `npm login` completed as a member of the `dograh` npm org. npm
-#     publish will prompt interactively for a 2FA OTP — run this script
-#     in a terminal where you can type the code.
+# Prerequisites (one-time):
+#   - `pip install --upgrade build twine`
+#   - `npm login` as a member of the `@noralai` org. The publish steps
+#     prompt for 2FA OTPs — run this script in a terminal where you can
+#     type them.
 #
-# The script is idempotent up to the upload steps: each publish is gated
-# by a y/N prompt, so you can dry-run the build and bail before anything
-# hits a registry.
+# Each publish is gated by a y/N prompt so you can dry-run the build
+# and bail before anything hits a registry.
 
 set -euo pipefail
 
 VERSION="${1:-}"
 if [[ -z "$VERSION" ]]; then
-    echo "usage: $0 <version>   # e.g. 0.1.2" >&2
+    echo "usage: $0 <version>   # e.g. 0.2.0" >&2
     exit 1
 fi
 if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.\-][A-Za-z0-9.]+)?$ ]]; then
-    echo "error: '$VERSION' does not look like semver (e.g. 0.1.2 or 0.2.0-rc.1)" >&2
+    echo "error: '$VERSION' does not look like semver (e.g. 0.2.0 or 0.2.0-rc.1)" >&2
     exit 1
 fi
 
@@ -43,9 +45,8 @@ if ! command -v npm >/dev/null 2>&1; then
     exit 1
 fi
 if ! NPM_USER="$(npm whoami 2>/dev/null)"; then
-    echo "error: not logged in to npm. Run 'npm login' as a member of the" >&2
-    echo "       dograh org before re-running this script — otherwise PyPI" >&2
-    echo "       will publish and npm will 404, leaving the release split." >&2
+    echo "error: not logged in to npm. Run 'npm login' as a member of" >&2
+    echo "       the @noralai org before re-running this script" >&2
     exit 1
 fi
 echo "  npm: logged in as $NPM_USER"
@@ -53,7 +54,7 @@ echo "  npm: logged in as $NPM_USER"
 echo "→ Regenerating typed SDK sources from node_specs..."
 ./scripts/generate_sdk.sh
 
-if ! git diff --quiet -- sdk/python/src/dograh_sdk/typed sdk/typescript/src/typed; then
+if ! git diff --quiet -- sdk/python/src/noralai_voice/typed sdk/typescript/src/typed; then
     echo
     echo "⚠  node_specs regeneration changed typed files. Review the diff"
     echo "   above and commit before releasing — otherwise the tag will"
@@ -63,7 +64,7 @@ if ! git diff --quiet -- sdk/python/src/dograh_sdk/typed sdk/typescript/src/type
     fi
 fi
 
-echo "→ Bumping versions to $VERSION..."
+echo "→ Bumping versions to $VERSION in both packages..."
 VERSION="$VERSION" python - <<'PY'
 import os
 import pathlib
@@ -75,17 +76,16 @@ py = pathlib.Path("sdk/python/pyproject.toml")
 py.write_text(
     re.sub(r'^version = "[^"]+"', f'version = "{version}"', py.read_text(), count=1, flags=re.M)
 )
-
 ts = pathlib.Path("sdk/typescript/package.json")
 ts.write_text(
     re.sub(r'"version": "[^"]+"', f'"version": "{version}"', ts.read_text(), count=1)
 )
 
-print(f"  pyproject.toml → {version}")
-print(f"  package.json  → {version}")
+print(f"  sdk/python/pyproject.toml       -> {version}")
+print(f"  sdk/typescript/package.json     -> {version}")
 PY
 
-echo "→ Building Python wheel + sdist..."
+echo "→ Building Python wheel + sdist (noralai-voice)..."
 (
     cd sdk/python
     rm -rf dist build
@@ -93,7 +93,7 @@ echo "→ Building Python wheel + sdist..."
     twine check dist/*
 )
 
-echo "→ Building TypeScript + running tests..."
+echo "→ Building TypeScript + running tests (@noralai/voice-sdk)..."
 (
     cd sdk/typescript
     rm -rf dist
@@ -104,32 +104,34 @@ echo "→ Building TypeScript + running tests..."
 
 echo
 echo "============================================================"
-echo "  Built dograh-sdk==$VERSION and @dograh/sdk@$VERSION"
+echo "  Built two packages at version $VERSION:"
+echo "    - noralai-voice"
+echo "    - @noralai/voice-sdk"
 echo "  Nothing has been published yet."
 echo "============================================================"
 echo
 
-if confirm "Upload dograh-sdk==$VERSION to TestPyPI first (recommended)?"; then
+if confirm "Upload noralai-voice==$VERSION to TestPyPI first (recommended)?"; then
     (cd sdk/python && twine upload --repository testpypi dist/*)
-    echo "  → https://test.pypi.org/project/dograh-sdk/$VERSION/"
+    echo "  -> https://test.pypi.org/project/noralai-voice/$VERSION/"
     echo
 fi
 
-if confirm "Publish @dograh/sdk@$VERSION to npm? (will prompt for 2FA OTP)"; then
+if confirm "Publish @noralai/voice-sdk@$VERSION to npm? (will prompt for 2FA OTP)"; then
     (cd sdk/typescript && npm publish --access public)
-    echo "  → https://www.npmjs.com/package/@dograh/sdk/v/$VERSION"
+    echo "  -> https://www.npmjs.com/package/@noralai/voice-sdk/v/$VERSION"
     echo
 fi
 
-if confirm "Upload dograh-sdk==$VERSION to PyPI?"; then
+if confirm "Upload noralai-voice==$VERSION to PyPI?"; then
     (cd sdk/python && twine upload dist/*)
-    echo "  → https://pypi.org/project/dograh-sdk/$VERSION/"
+    echo "  -> https://pypi.org/project/noralai-voice/$VERSION/"
     echo
 fi
 
 if confirm "Create annotated git tag sdks-v$VERSION at HEAD?"; then
-    git tag -a "sdks-v$VERSION" -m "dograh-sdk + @dograh/sdk $VERSION"
-    echo "  → created tag (not pushed). Push with:"
+    git tag -a "sdks-v$VERSION" -m "noralai-voice + @noralai/voice-sdk $VERSION"
+    echo "  -> created tag (not pushed). Push with:"
     echo "     git push origin sdks-v$VERSION"
 fi
 

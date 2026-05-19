@@ -307,10 +307,15 @@ class WorkflowRunClient(BaseDBClient):
                         "recording_url": run.recording_url,
                         "transcript_url": run.transcript_url,
                         "cost_info": {
-                            "dograh_token_usage": (
-                                run.cost_info.get("dograh_token_usage")
+                            "token_usage": (
+                                # Read new + legacy keys for backward compat
+                                run.cost_info.get("token_usage")
+                                or run.cost_info.get("dograh_token_usage")
                                 if run.cost_info
-                                and "dograh_token_usage" in run.cost_info
+                                and (
+                                    "token_usage" in run.cost_info
+                                    or "dograh_token_usage" in run.cost_info
+                                )
                                 else round(
                                     float(run.cost_info.get("total_cost_usd", 0)) * 100,
                                     2,
@@ -361,6 +366,7 @@ class WorkflowRunClient(BaseDBClient):
             run = result.scalars().first()
             if not run:
                 raise ValueError(f"Workflow run with ID {run_id} not found")
+            previous_state = run.state
             if recording_url:
                 run.recording_url = recording_url
             if transcript_url:
@@ -394,6 +400,39 @@ class WorkflowRunClient(BaseDBClient):
                 await session.rollback()
                 raise e
             await session.refresh(run)
+
+        # Integration-webhook firing: this is the single chokepoint
+        # for all four terminal-transition paths (pipecat
+        # on_pipeline_finished, telephony status_processor, campaign
+        # dispatcher, agent_stream). Detect the transition outside the
+        # session block so we don't hold a DB connection during enqueue.
+        if state is not None and state != previous_state:
+            from api.services.integration_webhooks import event_for_terminal_state
+
+            event = event_for_terminal_state(state)
+            if event is not None:
+                # Lazy import to avoid the arq <-> db_client import
+                # cycle at module load. Enqueue is fire-and-forget;
+                # if redis is unreachable, log and move on — we never
+                # want the run-completion path to fail because the
+                # webhook bus is degraded.
+                try:
+                    from api.tasks.arq import enqueue_job
+                    from api.tasks.function_names import FunctionNames
+
+                    await enqueue_job(
+                        FunctionNames.FIRE_INTEGRATION_WEBHOOKS,
+                        run.id,
+                        event,
+                    )
+                except Exception:
+                    from loguru import logger
+
+                    logger.exception(
+                        f"Failed to enqueue integration-webhook firing for "
+                        f"run {run.id} (event={event}); continuing"
+                    )
+
         return run
 
     async def get_workflow_run_with_context(

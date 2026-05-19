@@ -1,4 +1,4 @@
-// Tests for the typed SDK (`@dograh/sdk/typed`). Mirrors
+// Tests for the typed SDK (`@noralai/voice-sdk/typed`). Mirrors
 // api/tests/test_dograh_sdk_typed.py — checks that generated factories
 // produce objects consumable by `workflow.addTyped()`.
 

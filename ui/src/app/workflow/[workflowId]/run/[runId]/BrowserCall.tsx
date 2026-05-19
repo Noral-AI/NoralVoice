@@ -93,11 +93,11 @@ const BrowserCall = ({ workflowId, workflowRunId, initialContextVariables }: {
     }, [isCompleted, auth.isAuthenticated, workflowId, workflowRunId]);
 
     const navigateToCredits = () => {
-        router.push('/api-keys');
+        router.push('/settings?tab=api-keys');
     };
 
     const navigateToModelConfig = () => {
-        router.push('/model-configurations');
+        router.push('/settings?tab=models');
     };
 
     const navigateToWorkflow = () => {

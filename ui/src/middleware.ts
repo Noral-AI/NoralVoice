@@ -1,7 +1,11 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
-const OSS_TOKEN_COOKIE = 'dograh_auth_token';
+const OSS_TOKEN_COOKIE = 'noralvoice_auth_token';
+// PHASE-5 COOKIE-MIGRATION — fall back to the legacy cookie so a
+// stale browser session keeps working through the dual-write window.
+// Remove in a follow-up after one release.
+const LEGACY_OSS_TOKEN_COOKIE = 'dograh_auth_token';
 
 // Paths that don't require authentication in OSS mode
 const PUBLIC_PATHS = ['/auth/login', '/auth/signup'];
@@ -37,7 +41,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = request.cookies.get(OSS_TOKEN_COOKIE)?.value;
+  const token =
+    request.cookies.get(OSS_TOKEN_COOKIE)?.value ??
+    request.cookies.get(LEGACY_OSS_TOKEN_COOKIE)?.value;
   const { pathname } = request.nextUrl;
 
   // Allow public paths without auth

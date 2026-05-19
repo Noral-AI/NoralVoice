@@ -1,6 +1,7 @@
-from typing import Optional, TypedDict
+from typing import Optional
 
 import openai
+from typing_extensions import TypedDict
 from deepgram import DeepgramClient
 from groq import Groq
 
@@ -41,7 +42,7 @@ class UserConfigurationValidator:
             ServiceProviders.GOOGLE.value: self._check_google_api_key,
             ServiceProviders.AZURE.value: self._check_azure_api_key,
             ServiceProviders.CARTESIA.value: self._check_cartesia_api_key,
-            ServiceProviders.DOGRAH.value: self._check_dograh_api_key,
+            ServiceProviders.DOGRAH.value: self._check_model_service_api_key,
             ServiceProviders.SARVAM.value: self._check_sarvam_api_key,
             ServiceProviders.SPEECHMATICS.value: self._check_speechmatics_api_key,
             ServiceProviders.CAMB.value: self._check_camb_api_key,
@@ -52,6 +53,8 @@ class UserConfigurationValidator:
             ServiceProviders.ASSEMBLYAI.value: self._check_assemblyai_api_key,
             ServiceProviders.GLADIA.value: self._check_gladia_api_key,
             ServiceProviders.RIME.value: self._check_rime_api_key,
+            ServiceProviders.ANTHROPIC.value: self._check_anthropic_api_key,
+            ServiceProviders.NORALAI.value: self._check_noralai_api_key,
         }
 
     async def validate(
@@ -130,6 +133,20 @@ class UserConfigurationValidator:
                 return [{"model": service_name, "message": str(e)}]
             return []
 
+        # NoralAI validator needs base_url from service_config
+        if provider == ServiceProviders.NORALAI.value:
+            try:
+                if not self._check_noralai_api_key(provider, service_config):
+                    return [
+                        {
+                            "model": service_name,
+                            "message": f"Invalid {provider} configuration",
+                        }
+                    ]
+            except ValueError as e:
+                return [{"model": service_name, "message": str(e)}]
+            return []
+
         api_key = service_config.api_key
 
         try:
@@ -186,10 +203,10 @@ class UserConfigurationValidator:
     def _check_cartesia_api_key(self, model: str, api_key: str) -> bool:
         return True
 
-    def _check_dograh_api_key(self, model: str, api_key: str) -> bool:
+    def _check_model_service_api_key(self, model: str, api_key: str) -> bool:
         if api_key.startswith("dgr"):
             raise ValueError(
-                "You provided a Dograh API key (dgr...) instead of a service key. "
+                "You provided a model API key (dgr...) instead of a service key. "
                 "Please use a service key (mps...)."
             )
         auth = getattr(self, "_auth_context", {})
@@ -228,4 +245,18 @@ class UserConfigurationValidator:
         return True
 
     def _check_rime_api_key(self, model: str, api_key: str) -> bool:
+        return True
+
+    def _check_anthropic_api_key(self, model: str, api_key: str) -> bool:
+        # Accept any non-empty key shape. Live validation against Anthropic's
+        # /v1/messages would cost a token and is deferred to first real call.
+        if not api_key or not isinstance(api_key, str):
+            return False
+        return api_key.startswith("sk-ant-") or api_key.startswith("sk-")
+
+    def _check_noralai_api_key(self, model: str, service_config) -> bool:
+        # NoralAI endpoints are user-operated (e.g. RunPod). Validate that a
+        # base_url is configured; key shape varies by deployment.
+        if not getattr(service_config, "base_url", None):
+            raise ValueError("base_url is required for NoralAI services")
         return True

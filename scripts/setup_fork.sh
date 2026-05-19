@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Contributor bootstrap. Run this once after cloning your fork.
-# Configures git remotes (origin = your fork, upstream = dograh-hq/dograh),
+# Configures git remotes (origin = your fork, upstream = noral-hq/dograh),
 # initializes the pipecat submodule, creates the Python venv, and copies
 # the .env templates.
 
@@ -12,7 +12,7 @@ BLUE='\033[0;34m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-UPSTREAM_URL="https://github.com/dograh-hq/dograh.git"
+UPSTREAM_URL="https://github.com/noral-hq/dograh.git"
 
 BASE_DIR="$(cd "$(dirname "$(dirname "${BASH_SOURCE[0]}")")" && pwd)"
 cd "$BASE_DIR"
@@ -34,8 +34,8 @@ echo ""
 echo -e "${BLUE}[1/4] Configuring git remotes${NC}"
 
 current_origin=$(git remote get-url origin 2>/dev/null || echo "")
-canonical_https="https://github.com/dograh-hq/dograh.git"
-canonical_ssh="git@github.com:dograh-hq/dograh.git"
+canonical_https="https://github.com/noral-hq/dograh.git"
+canonical_ssh="git@github.com:noral-hq/dograh.git"
 
 # If origin is missing or points at the canonical repo (i.e. user cloned the
 # canonical repo directly without forking), prompt for the fork URL.
@@ -70,7 +70,7 @@ if [[ -z "$existing_upstream" ]]; then
     echo -e "${GREEN}✓ upstream set to $UPSTREAM_URL${NC}"
 elif [[ "$existing_upstream" != "$UPSTREAM_URL" && "$existing_upstream" != "$canonical_ssh" ]]; then
     echo -e "${YELLOW}upstream currently points at $existing_upstream (expected $UPSTREAM_URL).${NC}"
-    echo -e "${YELLOW}Reset upstream to dograh-hq/dograh? [y/N]:${NC}"
+    echo -e "${YELLOW}Reset upstream to noral-hq/dograh? [y/N]:${NC}"
     read -r -p "> " RESET_UPSTREAM
     if [[ "$RESET_UPSTREAM" =~ ^[Yy] ]]; then
         git remote set-url upstream "$UPSTREAM_URL"

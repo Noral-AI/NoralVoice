@@ -1,6 +1,6 @@
 # API - Backend Service
 
-FastAPI backend for the Dograh voice AI platform.
+FastAPI backend for the NoralVoice voice agent platform by NoralAI.
 
 ## Project Structure
 

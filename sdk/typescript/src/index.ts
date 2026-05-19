@@ -8,7 +8,7 @@
  *
  * @example
  * ```ts
- * import { DograhClient, Workflow } from "@dograh/sdk";
+ * import { DograhClient, Workflow } from "@noralai/voice-sdk";
  *
  * const client = new DograhClient({ baseUrl: "http://localhost:8000", apiKey: "..." });
  * const wf = new Workflow({ client, name: "loan_qualification" });
@@ -54,6 +54,6 @@ export type {
 } from "./types.js";
 
 // Typed SDK — generated per-node interfaces + factories. Importable as
-// `import { startCall, type StartCall } from "@dograh/sdk/typed"` for
+// `import { startCall, type StartCall } from "@noralai/voice-sdk/typed"` for
 // tree-shaking, or via the `TypedNode` union here.
 export type { TypedNode } from "./typed/index.js";

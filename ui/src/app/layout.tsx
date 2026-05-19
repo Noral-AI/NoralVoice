@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Suspense } from "react";
 
-import ChatwootWidget from "@/components/ChatwootWidget";
 import AppLayout from "@/components/layout/AppLayout";
 import PostHogIdentify from "@/components/PostHogIdentify";
 import { SentryErrorBoundary } from "@/components/SentryErrorBoundary";
@@ -28,8 +27,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Noral Voice",
-  description: "Voice Assistant Workflow Builder",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://voice.noral.ai",
+  ),
+  title: "NoralVoice",
+  description: "Voice agent workflow builder by NoralAI",
 };
 
 export default function RootLayout({
@@ -73,7 +75,6 @@ export default function RootLayout({
                         {children}
                       </AppLayout>
                       <Toaster />
-                      <ChatwootWidget />
                     </OnboardingProvider>
                   </TelephonyConfigWarningsProvider>
                 </UserConfigProvider>

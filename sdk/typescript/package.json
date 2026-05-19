@@ -1,17 +1,17 @@
 {
-  "name": "@dograh/sdk",
-  "version": "0.1.5",
-  "description": "Typed builder for Dograh voice-AI workflows",
+  "name": "@noralai/voice-sdk",
+  "version": "0.4.0",
+  "description": "Typed builder for NoralVoice voice-AI workflows",
   "license": "BSD-2-Clause",
-  "author": "Zansat Technologies Private Limited",
-  "homepage": "https://dograh.com",
+  "author": "Noral AI <support@noral.ai>",
+  "homepage": "https://noral.ai",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dograh-hq/dograh.git",
+    "url": "https://github.com/Noral-AI/NoralVoice.git",
     "directory": "sdk/typescript"
   },
   "keywords": [
-    "dograh",
+    "noralvoice",
     "voice-ai",
     "workflow",
     "sdk",
@@ -36,6 +36,9 @@
     "README.md",
     "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
@@ -46,6 +49,7 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "@types/node": "^20.12.0",
     "openapi-typescript": "^7.13.0",
     "typescript": "^5.3.0"
   }

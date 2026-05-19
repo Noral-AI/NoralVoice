@@ -471,6 +471,23 @@ def create_llm_service_from_provider(
             api_key=api_key or "none",
             settings=SpeachesLLMSettings(model=model),
         )
+    elif provider == ServiceProviders.ANTHROPIC.value:
+        from pipecat.services.anthropic.llm import (
+            AnthropicLLMService,
+            AnthropicLLMSettings,
+        )
+        return AnthropicLLMService(
+            api_key=api_key,
+            settings=AnthropicLLMSettings(model=model, temperature=0.1),
+        )
+    elif provider == ServiceProviders.NORALAI.value:
+        # NoralAI runs an OpenAI-compatible inference endpoint. Reuse the
+        # OpenAI client with a custom base_url so it routes there.
+        return OpenAILLMService(
+            api_key=api_key or "none",
+            base_url=base_url or "https://llm.noral.ai/v1",
+            settings=OpenAILLMSettings(model=model, temperature=0.1),
+        )
     else:
         raise HTTPException(status_code=400, detail=f"Invalid LLM provider {provider}")
 
@@ -551,6 +568,8 @@ def create_llm_service(user_config):
     elif provider == ServiceProviders.AZURE.value:
         kwargs["endpoint"] = user_config.llm.endpoint
     elif provider == ServiceProviders.SPEACHES.value:
+        kwargs["base_url"] = user_config.llm.base_url
+    elif provider == ServiceProviders.NORALAI.value:
         kwargs["base_url"] = user_config.llm.base_url
     elif provider == ServiceProviders.AWS_BEDROCK.value:
         kwargs["aws_access_key"] = user_config.llm.aws_access_key
