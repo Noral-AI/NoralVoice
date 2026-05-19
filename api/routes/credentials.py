@@ -110,6 +110,7 @@ def build_credential_response(credential) -> CredentialResponse:
 
 @router.get(
     "/",
+    response_model=List[CredentialResponse],
     **sdk_expose(
         method="list_credentials",
         description="List webhook credentials available to the authenticated organization.",

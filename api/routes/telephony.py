@@ -60,8 +60,13 @@ class InitiateCallRequest(BaseModel):
     from_phone_number_id: int | None = None
 
 
+class InitiateCallResponse(BaseModel):
+    message: str
+
+
 @router.post(
     "/initiate-call",
+    response_model=InitiateCallResponse,
     **sdk_expose(
         method="test_phone_call",
         description="Place a test call from a workflow to a phone number.",
@@ -69,7 +74,7 @@ class InitiateCallRequest(BaseModel):
 )
 async def initiate_call(
     request: InitiateCallRequest, user: UserModel = Depends(get_user)
-):
+) -> InitiateCallResponse:
     """Initiate a call using the configured telephony provider from web browser. This is
     supposed to be a test call method for the draft version of the agent."""
 
@@ -221,7 +226,9 @@ async def initiate_call(
         initial_context=updated_initial_context,
     )
 
-    return {"message": f"Call initiated successfully with run name {workflow_run_name}"}
+    return InitiateCallResponse(
+        message=f"Call initiated successfully with run name {workflow_run_name}"
+    )
 
 
 async def _verify_organization_phone_number(

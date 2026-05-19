@@ -5,6 +5,7 @@ from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
+from pydantic import BaseModel
 
 from api.db import db_client
 from api.enums import PostHogEvent
@@ -23,6 +24,12 @@ from api.services.posthog_client import capture_event
 from api.services.storage import storage_fs
 from api.tasks.arq import enqueue_job
 from api.tasks.function_names import FunctionNames
+
+
+class DeleteKbDocumentResponse(BaseModel):
+    success: bool
+    message: str
+
 
 router = APIRouter(prefix="/knowledge-base", tags=["knowledge-base"])
 
@@ -314,6 +321,7 @@ async def get_document(
 
 @router.delete(
     "/documents/{document_uuid}",
+    response_model=DeleteKbDocumentResponse,
     summary="Delete document",
     **sdk_expose(method="delete_kb_document", description="Soft-delete a knowledge-base document and its chunks."),
 )
@@ -341,7 +349,7 @@ async def delete_document(
             f"user {user.id}, org {user.selected_organization_id}"
         )
 
-        return {"success": True, "message": "Document deleted successfully"}
+        return DeleteKbDocumentResponse(success=True, message="Document deleted successfully")
 
     except HTTPException:
         raise
