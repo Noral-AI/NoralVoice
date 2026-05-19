@@ -3,6 +3,7 @@
 import type { Team } from "@stackframe/stack";
 import {
   AlertTriangle,
+  ArrowUpCircle,
   AudioLines,
   Brain,
   ChevronLeft,
@@ -52,6 +53,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAppConfig } from "@/context/AppConfigContext";
 import { useTelephonyConfigWarnings } from "@/context/TelephonyConfigWarningsContext";
+import { useLatestReleaseVersion } from "@/hooks/useLatestReleaseVersion";
 import type { LocalUser } from "@/lib/auth";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -174,6 +176,12 @@ export function AppSidebar() {
   // Version info from app config context
   const versionInfo = config ? { ui: config.uiVersion, api: config.apiVersion } : null;
 
+  // Check for updates only on self-hosted (OSS) deployments — cloud is managed for the user.
+  const { latest: latestRelease, isBehind, isLatest } = useLatestReleaseVersion(
+    versionInfo?.ui,
+    { enabled: config?.deploymentMode === "oss" },
+  );
+
   const isActive = (path: string) => pathname.startsWith(path);
 
   const handleMobileNavClick = () => {
@@ -257,7 +265,7 @@ export function AppSidebar() {
               className="notranslate flex items-center gap-2 px-2 text-xl font-bold"
               translate="no"
             >
-              Noral Voice
+              Dograh
               {versionInfo && (
                 <span
                   className="notranslate text-xs font-normal text-muted-foreground"
@@ -267,6 +275,36 @@ export function AppSidebar() {
                 </span>
               )}
             </Link>
+            {isBehind && latestRelease && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <a
+                    href="https://docs.dograh.com/deployment/update"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded-md border bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium leading-none text-amber-900 transition-opacity hover:opacity-80 dark:bg-amber-950 dark:text-amber-200"
+                  >
+                    <ArrowUpCircle className="h-3 w-3" />
+                    Update
+                  </a>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>Latest: {latestRelease} — click to see the update guide</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {isLatest && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex items-center rounded-md border bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium leading-none text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+                    Latest
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>You&apos;re running the latest release</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
 
           <SidebarTrigger className={cn("hover:bg-accent", isCollapsed && "mx-auto")}>
