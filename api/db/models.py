@@ -19,7 +19,8 @@ from sqlalchemy import (
     and_,
     text,
 )
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import declarative_base, declared_attr, relationship
 
 from api.constants import DEFAULT_CAMPAIGN_RETRY_CONFIG
 
@@ -35,6 +36,84 @@ from ..enums import (
 )
 
 Base = declarative_base()
+
+
+class ExternalActorModel(Base):
+    """Append-only roster of non-human identities (e.g. NoralOS agents).
+
+    Looked up by ``(integration_id, external_actor_id)`` from the
+    request-scoped ``X-Noralos-Actor-*`` headers. See
+    ``api/services/auth/external_actor_middleware.py``.
+    """
+
+    __tablename__ = "external_actors"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    integration_id = Column(Text, nullable=False)
+    external_actor_id = Column(Text, nullable=False)
+    display_name = Column(Text, nullable=False)
+    display_kind = Column(Text, nullable=False)
+    metadata_json = Column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    first_seen_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    last_seen_at = Column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "integration_id",
+            "external_actor_id",
+            name="uq_external_actors_integration_actor",
+        ),
+    )
+
+
+class ExternalAttributionMixin:
+    """Six nullable columns recording which external actor created / last
+    modified this row. NULL means human-authored via NoralVoice directly.
+
+    Stamped by SQLAlchemy ``before_insert`` / ``before_update`` listeners in
+    ``api/services/auth/external_actor_events.py`` when the request-scoped
+    ``CURRENT_EXTERNAL_ACTOR`` context var is set by the middleware.
+    """
+
+    @declared_attr
+    def created_by_external_actor_id(cls):
+        return Column(
+            UUID(as_uuid=True),
+            ForeignKey("external_actors.id", ondelete="SET NULL"),
+            nullable=True,
+        )
+
+    @declared_attr
+    def created_by_external_run_id(cls):
+        return Column(UUID(as_uuid=True), nullable=True)
+
+    @declared_attr
+    def created_by_external_label(cls):
+        return Column(Text, nullable=True)
+
+    @declared_attr
+    def last_modified_by_external_actor_id(cls):
+        return Column(
+            UUID(as_uuid=True),
+            ForeignKey("external_actors.id", ondelete="SET NULL"),
+            nullable=True,
+        )
+
+    @declared_attr
+    def last_modified_by_external_run_id(cls):
+        return Column(UUID(as_uuid=True), nullable=True)
+
+    @declared_attr
+    def last_modified_by_external_label(cls):
+        return Column(Text, nullable=True)
 
 
 # TODO: remove workflow_defintion after migration, remove nullable workflow_defintion_id from Workflow and Workflowrun
@@ -177,7 +256,7 @@ class OrganizationConfigurationModel(Base):
     )
 
 
-class TelephonyConfigurationModel(Base):
+class TelephonyConfigurationModel(Base, ExternalAttributionMixin):
     __tablename__ = "telephony_configurations"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -350,7 +429,7 @@ class WorkflowDefinitionModel(Base):
     workflow_runs = relationship("WorkflowRunModel", back_populates="definition")
 
 
-class WorkflowModel(Base):
+class WorkflowModel(Base, ExternalAttributionMixin):
     __tablename__ = "workflows"
     id = Column(Integer, primary_key=True, index=True)
     workflow_uuid = Column(
@@ -434,7 +513,7 @@ class WorkflowTemplates(Base):
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
-class WorkflowRunModel(Base):
+class WorkflowRunModel(Base, ExternalAttributionMixin):
     __tablename__ = "workflow_runs"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
@@ -621,7 +700,7 @@ class OrganizationUsageCycleModel(Base):
     )
 
 
-class CampaignModel(Base):
+class CampaignModel(Base, ExternalAttributionMixin):
     __tablename__ = "campaigns"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -785,7 +864,7 @@ class QueuedRunModel(Base):
     )
 
 
-class EmbedTokenModel(Base):
+class EmbedTokenModel(Base, ExternalAttributionMixin):
     """Model for storing workflow embed tokens"""
 
     __tablename__ = "embed_tokens"
@@ -1086,7 +1165,7 @@ class ExternalCredentialModel(Base):
     )
 
 
-class ToolModel(Base):
+class ToolModel(Base, ExternalAttributionMixin):
     """Model for storing reusable tools that can be invoked during workflows.
 
     Tools provide a standardized way to integrate external functionality - from
@@ -1167,7 +1246,7 @@ class ToolModel(Base):
     )
 
 
-class KnowledgeBaseDocumentModel(Base):
+class KnowledgeBaseDocumentModel(Base, ExternalAttributionMixin):
     """Model for storing document-level metadata in the knowledge base.
 
     Each document represents a source file (PDF, DOCX, etc.) that has been
@@ -1262,7 +1341,7 @@ class KnowledgeBaseDocumentModel(Base):
     )
 
 
-class WorkflowRecordingModel(Base):
+class WorkflowRecordingModel(Base, ExternalAttributionMixin):
     """Model for storing audio recordings scoped to an organization.
 
     Recordings are used in hybrid prompts where parts of the output are pre-recorded

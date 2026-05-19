@@ -198,3 +198,12 @@ OSS_JWT_EXPIRY_HOURS = int(os.getenv("OSS_JWT_EXPIRY_HOURS", "720"))  # 30 days
 TELNYX_WEBHOOK_VERIFICATION_OPTIONAL = (
     os.getenv("TELNYX_WEBHOOK_VERIFICATION_OPTIONAL", "false").lower() == "true"
 )
+
+# Phase 7.5 attribution kill switch. Default ON — middleware reads the
+# X-Noralos-Actor-* headers and stamps attribution columns. Set to "false"
+# to short-circuit the middleware (headers ignored, attribution columns
+# stay NULL on writes). Migration columns remain regardless; no data loss
+# from flipping this off during an incident.
+EXTERNAL_ACTOR_HEADERS_ENABLED = (
+    os.getenv("EXTERNAL_ACTOR_HEADERS_ENABLED", "true").lower() == "true"
+)
