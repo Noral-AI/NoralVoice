@@ -59,17 +59,8 @@ export function MCPSection() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        For step-by-step setup with Claude Code, Claude Desktop, Cursor, and
-        other clients, see the{" "}
-        <Link
-          href="https://docs.dograh.com/integrations/mcp"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary underline hover:no-underline"
-        >
-          MCP integration guide
-        </Link>
-        .
+        Compatible with Claude Code, Claude Desktop, Cursor, and other MCP
+        clients via Streamable HTTP.
       </p>
     </div>
   );

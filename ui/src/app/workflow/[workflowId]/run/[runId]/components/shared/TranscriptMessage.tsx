@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, Brain, ExternalLink, GitBranch, MicOff, Wrench } from 'lucide-react';
+import { AlertTriangle, Brain, GitBranch, MicOff, Wrench } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
@@ -50,14 +50,6 @@ export function TranscriptMessage({ message, nextMessage }: TranscriptMessagePro
                     <div className="text-sm text-amber-600 dark:text-amber-300 mt-0.5">
                         {message.text}
                     </div>
-                    <a
-                        href="https://docs.dograh.com/configurations/interruption"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 hover:underline mt-1"
-                    >
-                        Learn more <ExternalLink className="h-3 w-3" />
-                    </a>
                 </div>
             </div>
         );
