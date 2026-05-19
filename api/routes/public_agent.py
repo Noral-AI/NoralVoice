@@ -13,7 +13,7 @@ from pydantic import BaseModel
 
 from api.db import db_client
 from api.enums import TriggerState
-from api.services.quota_service import check_dograh_quota_by_user_id
+from api.services.quota_service import check_model_quota_by_user_id
 from api.services.telephony.factory import (
     get_default_telephony_provider,
     get_telephony_provider_by_id,
@@ -89,7 +89,7 @@ async def _initiate_call(
 
     # 4.5 Check Dograh quota before initiating the call (apply the trigger's
     # workflow's model_overrides so we evaluate the keys this run will use).
-    quota_result = await check_dograh_quota_by_user_id(
+    quota_result = await check_model_quota_by_user_id(
         api_key.created_by, workflow_id=trigger.workflow_id
     )
     if not quota_result.has_quota:

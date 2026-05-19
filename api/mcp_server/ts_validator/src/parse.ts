@@ -493,7 +493,7 @@ function literalToJs(
 }
 
 // Spec-driven validation, mirrors the shape of
-// `sdk/python/src/dograh_sdk/_validation.py` but lightweight — applies
+// `sdk/python/src/noralai_voice/_validation.py` but lightweight — applies
 // defaults for missing optionals, catches unknown keys, enforces `options`
 // membership, and type-shapes the scalar and `fixed_collection` cases.
 function validateNodeData(

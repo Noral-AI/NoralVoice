@@ -31,6 +31,7 @@ router = APIRouter(prefix="/knowledge-base", tags=["knowledge-base"])
     "/upload-url",
     response_model=DocumentUploadResponseSchema,
     summary="Get presigned URL for document upload",
+    **sdk_expose(method="create_kb_upload_url", description="Get a pre-signed PUT URL for uploading a knowledge-base document."),
 )
 async def get_upload_url(
     request: DocumentUploadRequestSchema,
@@ -92,6 +93,7 @@ async def get_upload_url(
     "/process-document",
     response_model=DocumentResponseSchema,
     summary="Trigger document processing",
+    **sdk_expose(method="process_kb_document", description="Trigger async parsing/embedding of an uploaded knowledge-base document."),
 )
 async def process_document(
     request: ProcessDocumentRequestSchema,
@@ -261,6 +263,7 @@ async def list_documents(
     "/documents/{document_uuid}",
     response_model=DocumentResponseSchema,
     summary="Get document details",
+    **sdk_expose(method="get_kb_document", description="Get knowledge-base document details (processing status, chunks, metadata)."),
 )
 async def get_document(
     document_uuid: str,
@@ -312,6 +315,7 @@ async def get_document(
 @router.delete(
     "/documents/{document_uuid}",
     summary="Delete document",
+    **sdk_expose(method="delete_kb_document", description="Soft-delete a knowledge-base document and its chunks."),
 )
 async def delete_document(
     document_uuid: str,
@@ -352,6 +356,7 @@ async def delete_document(
     "/search",
     response_model=ChunkSearchResponseSchema,
     summary="Search for similar chunks",
+    **sdk_expose(method="search_kb", description="Semantic search against the knowledge base; returns matching chunks."),
 )
 async def search_chunks(
     request: ChunkSearchRequestSchema,

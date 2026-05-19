@@ -25,7 +25,7 @@ from api.enums import CallType, WorkflowRunState
 from api.errors.telephony_errors import TelephonyError
 from api.sdk_expose import sdk_expose
 from api.services.auth.depends import get_user
-from api.services.quota_service import check_dograh_quota, check_dograh_quota_by_user_id
+from api.services.quota_service import check_model_quota, check_model_quota_by_user_id
 from api.services.telephony.call_transfer_manager import get_call_transfer_manager
 from api.services.telephony.factory import (
     get_all_telephony_providers,
@@ -109,7 +109,7 @@ async def initiate_call(
 
     # Check Dograh quota before initiating the call (apply per-workflow
     # model_overrides so the keys we will actually use are the ones checked).
-    quota_result = await check_dograh_quota(user, workflow_id=request.workflow_id)
+    quota_result = await check_model_quota(user, workflow_id=request.workflow_id)
     if not quota_result.has_quota:
         raise HTTPException(status_code=402, detail=quota_result.error_message)
 
@@ -715,7 +715,7 @@ async def handle_inbound_run(request: Request):
             )
 
         # 4. Quota check (use the workflow's model_overrides if set).
-        quota_result = await check_dograh_quota_by_user_id(
+        quota_result = await check_model_quota_by_user_id(
             user_id, workflow_id=workflow_id
         )
         if not quota_result.has_quota:
@@ -849,7 +849,7 @@ async def handle_inbound_telephony(
 
         # Check quota before processing (apply per-workflow model_overrides).
         user_id = workflow_context["user_id"]
-        quota_result = await check_dograh_quota_by_user_id(
+        quota_result = await check_model_quota_by_user_id(
             user_id, workflow_id=workflow_id
         )
         if not quota_result.has_quota:

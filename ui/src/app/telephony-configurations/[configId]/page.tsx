@@ -3,7 +3,6 @@
 import {
   ArrowLeft,
   Copy,
-  ExternalLink,
   Pencil,
   Plus,
   Star,
@@ -178,7 +177,7 @@ export default function TelephonyConfigurationDetailPage() {
   if (!config) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <Button variant="ghost" onClick={() => router.push("/telephony-configurations")}>
+        <Button variant="ghost" onClick={() => router.push("/settings?tab=telephony")}>
           <ArrowLeft className="h-4 w-4 mr-2" /> Back
         </Button>
         <p className="mt-4 text-muted-foreground">Configuration not found.</p>
@@ -190,7 +189,7 @@ export default function TelephonyConfigurationDetailPage() {
     <div className="container mx-auto px-4 py-8 space-y-6">
       <div>
         <Link
-          href="/telephony-configurations"
+          href="/settings?tab=telephony"
           className="inline-flex items-center text-sm text-muted-foreground hover:underline"
         >
           <ArrowLeft className="h-4 w-4 mr-1" /> All configurations
@@ -259,15 +258,7 @@ export default function TelephonyConfigurationDetailPage() {
             <CardTitle>Phone numbers</CardTitle>
             <CardDescription>
               Numbers used as caller ID for outbound and accepted for inbound matching.
-              SIP URIs and extensions are supported alongside PSTN numbers.{" "}
-              <a
-                href="https://docs.dograh.com/integrations/telephony/inbound"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-0.5 underline"
-              >
-                Inbound docs <ExternalLink className="h-3 w-3" />
-              </a>
+              SIP URIs and extensions are supported alongside PSTN numbers.
             </CardDescription>
           </div>
           <Button

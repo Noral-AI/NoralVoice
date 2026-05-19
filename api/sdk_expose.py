@@ -1,6 +1,6 @@
 """Opt-in marker for exposing a FastAPI route through the Dograh SDK.
 
-The generated SDK client (`sdk/python/src/dograh_sdk/_generated_client.py`
+The generated SDK client (`sdk/python/src/noralai_voice/_generated_client.py`
 and the TypeScript equivalent) is built by walking the backend's OpenAPI
 schema and picking up any operation tagged with `x-sdk-method`. That
 means `generate_sdk.sh` stays in sync with the real HTTP paths — no more

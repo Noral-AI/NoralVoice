@@ -10,6 +10,7 @@ from api.db import db_client
 from api.db.models import UserModel
 from api.db.telephony_configuration_client import TelephonyConfigurationInUseError
 from api.enums import OrganizationConfigurationKey, PostHogEvent
+from api.sdk_expose import sdk_expose
 from api.schemas.telephony_config import (
     TelephonyConfigRequest,
     TelephonyConfigurationCreateRequest,
@@ -229,7 +230,18 @@ async def _sync_inbound_for_phone_number(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/telephony-configs", response_model=TelephonyConfigurationListResponse)
+@router.get(
+    "/telephony-configs",
+    response_model=TelephonyConfigurationListResponse,
+    **sdk_expose(
+        method="list_telephony_configs",
+        description=(
+            "List the org's telephony provider configurations (Twilio, Plivo, etc.) "
+            "with phone-number counts. Sensitive credential fields are masked "
+            "server-side before return."
+        ),
+    ),
+)
 async def list_telephony_configurations(user: UserModel = Depends(get_user)):
     """List the org's telephony configurations with phone-number counts."""
     if not user.selected_organization_id:
@@ -253,7 +265,18 @@ async def list_telephony_configurations(user: UserModel = Depends(get_user)):
     return TelephonyConfigurationListResponse(configurations=items)
 
 
-@router.post("/telephony-configs", response_model=TelephonyConfigurationDetail)
+@router.post(
+    "/telephony-configs",
+    response_model=TelephonyConfigurationDetail,
+    **sdk_expose(
+        method="create_telephony_config",
+        description=(
+            "Create a new telephony provider configuration for the org "
+            "(e.g. Twilio account_sid + auth_token). Sensitive fields are "
+            "masked in the response."
+        ),
+    ),
+)
 async def create_telephony_configuration(
     request: TelephonyConfigurationCreateRequest,
     user: UserModel = Depends(get_user),
@@ -446,6 +469,14 @@ async def list_phone_numbers(config_id: int, user: UserModel = Depends(get_user)
 @router.post(
     "/telephony-configs/{config_id}/phone-numbers",
     response_model=PhoneNumberResponse,
+    **sdk_expose(
+        method="add_phone_number",
+        description=(
+            "Register a phone number under an existing telephony configuration, "
+            "optionally assigning it to a workflow for inbound routing. "
+            "Returns the provider sync status when an inbound workflow is set."
+        ),
+    ),
 )
 async def create_phone_number(
     config_id: int,

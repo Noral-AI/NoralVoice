@@ -28,9 +28,9 @@ done
 
 # Get the project root directory (parent of scripts)
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-DOGRAH_DIR="$(dirname "$SCRIPT_DIR")"
+NORAL_DIR="$(dirname "$SCRIPT_DIR")"
 
-cd "$DOGRAH_DIR"
+cd "$NORAL_DIR"
 
 echo "Setting up pipecat as a git submodule..."
 

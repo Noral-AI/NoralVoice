@@ -436,7 +436,7 @@ class MPSServiceKeyClient:
                 )
                 return response.status_code == 200
         except Exception:
-            logger.warning("Failed to validate Dograh service key via MPS")
+            logger.warning("Failed to validate model service key via MPS")
             return False
 
     async def get_voices(

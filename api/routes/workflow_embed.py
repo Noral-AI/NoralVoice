@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from api.constants import BACKEND_API_ENDPOINT, ENVIRONMENT, UI_APP_URL
+from api.sdk_expose import sdk_expose
 from api.db import db_client
 from api.db.models import EmbedTokenModel, UserModel
 from api.enums import PostHogEvent
@@ -53,7 +54,7 @@ class EmbedTokenResponse(BaseModel):
     embed_script: str
 
 
-@router.post("/{workflow_id}/embed-token")
+@router.post("/{workflow_id}/embed-token", **sdk_expose(method="create_persistent_embed_token", description="Create or refresh the persistent embed_token used by browser widgets."))
 async def create_or_update_embed_token(
     workflow_id: int,
     request: Request,
@@ -133,7 +134,7 @@ async def create_or_update_embed_token(
     )
 
 
-@router.get("/{workflow_id}/embed-token")
+@router.get("/{workflow_id}/embed-token", **sdk_expose(method="get_persistent_embed_token", description="Get the active persistent embed_token for a workflow, if one exists."))
 async def get_embed_token(
     workflow_id: int,
     request: Request,
@@ -178,7 +179,7 @@ async def get_embed_token(
     )
 
 
-@router.delete("/{workflow_id}/embed-token")
+@router.delete("/{workflow_id}/embed-token", **sdk_expose(method="revoke_persistent_embed_token", description="Deactivate the workflow's persistent embed_token."))
 async def deactivate_embed_token(
     workflow_id: int,
     user: UserModel = Depends(get_user),

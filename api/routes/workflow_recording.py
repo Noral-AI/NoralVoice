@@ -62,6 +62,7 @@ def _build_response(rec) -> RecordingResponseSchema:
     "/upload-url",
     response_model=BatchRecordingUploadResponseSchema,
     summary="Get presigned URLs for recording uploads",
+    **sdk_expose(method="create_recording_upload_urls", description="Mint pre-signed PUT URLs for uploading one or more recording audio files."),
 )
 async def get_upload_urls(
     request: BatchRecordingUploadRequestSchema,
@@ -122,6 +123,7 @@ async def get_upload_urls(
     "/",
     response_model=BatchRecordingCreateResponseSchema,
     summary="Create recording records after upload",
+    **sdk_expose(method="create_recordings", description="Register one or more recording rows after audio has been uploaded via the presigned URLs."),
 )
 async def create_recordings(
     request: BatchRecordingCreateRequestSchema,
@@ -211,6 +213,7 @@ async def list_recordings(
 @router.delete(
     "/{recording_id}",
     summary="Delete a recording",
+    **sdk_expose(method="delete_recording", description="Soft-delete a recording."),
 )
 async def delete_recording(
     recording_id: str,
@@ -245,6 +248,7 @@ async def delete_recording(
     "/{id}",
     response_model=RecordingResponseSchema,
     summary="Update a recording's Recording ID",
+    **sdk_expose(method="update_recording", description="Rename a recording (recording_id slug); cascades to workflow definitions referencing it."),
 )
 async def update_recording(
     id: int,

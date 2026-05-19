@@ -1,14 +1,14 @@
 #!/usr/bin/env pwsh
 # Contributor bootstrap (Windows). Run this once after cloning your fork.
-# Configures git remotes (origin = your fork, upstream = dograh-hq/dograh),
+# Configures git remotes (origin = your fork, upstream = noral-hq/dograh),
 # initializes the pipecat submodule, creates the Python venv, and copies
 # the .env templates.
 
 $ErrorActionPreference = 'Stop'
 
-$UpstreamUrl    = 'https://github.com/dograh-hq/dograh.git'
+$UpstreamUrl    = 'https://github.com/noral-hq/dograh.git'
 $CanonicalHttps = $UpstreamUrl
-$CanonicalSsh   = 'git@github.com:dograh-hq/dograh.git'
+$CanonicalSsh   = 'git@github.com:noral-hq/dograh.git'
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $BaseDir   = Split-Path -Parent $ScriptDir
@@ -70,7 +70,7 @@ if (-not $existingUpstream) {
     Write-Host "OK upstream set to $UpstreamUrl" -ForegroundColor Green
 } elseif ($existingUpstream -ne $UpstreamUrl -and $existingUpstream -ne $CanonicalSsh) {
     Write-Host "upstream currently points at $existingUpstream (expected $UpstreamUrl)." -ForegroundColor Yellow
-    $reset = (Read-Host 'Reset upstream to dograh-hq/dograh? [y/N]').Trim()
+    $reset = (Read-Host 'Reset upstream to noral-hq/dograh? [y/N]').Trim()
     if ($reset -match '^[Yy]') {
         git remote set-url upstream $UpstreamUrl
         Write-Host "OK upstream reset to $UpstreamUrl" -ForegroundColor Green

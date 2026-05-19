@@ -436,7 +436,7 @@ export default function NewCampaignPage() {
                                     <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
                                         No telephony configurations yet.{' '}
                                         <Link
-                                            href="/telephony-configurations"
+                                            href="/settings?tab=telephony"
                                             className="underline text-foreground"
                                         >
                                             Add one

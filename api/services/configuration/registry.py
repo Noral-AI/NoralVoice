@@ -34,6 +34,8 @@ class ServiceProviders(str, Enum):
     RIME = "rime"
     OPENAI_REALTIME = "openai_realtime"
     GOOGLE_REALTIME = "google_realtime"
+    ANTHROPIC = "anthropic"
+    NORALAI = "noralai"
 
 
 class BaseServiceConfiguration(BaseModel):
@@ -53,6 +55,8 @@ class BaseServiceConfiguration(BaseModel):
         ServiceProviders.RIME,
         ServiceProviders.OPENAI_REALTIME,
         ServiceProviders.GOOGLE_REALTIME,
+        ServiceProviders.ANTHROPIC,
+        ServiceProviders.NORALAI,
         # ServiceProviders.SARVAM,
     ]
     api_key: str | list[str]
@@ -198,6 +202,20 @@ AWS_BEDROCK_MODELS = [
     "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
     "us.anthropic.claude-haiku-4-5-20251001-v1:0",
 ]
+ANTHROPIC_MODELS = [
+    "claude-opus-4-7-20251025",
+    "claude-sonnet-4-6-20251015",
+    "claude-haiku-4-5-20251001",
+    "claude-opus-4-1-20250805",
+    "claude-sonnet-4-20250514",
+    "claude-3-5-sonnet-20241022",
+]
+# NoralAI is an OpenAI-compatible self-hosted endpoint. Model names depend on
+# what's loaded on the inference server (RunPod, vLLM, etc.). Left as
+# free-text in the UI; this list is just to seed common examples.
+NORALAI_MODELS = [
+    "noral-voice-default",
+]
 
 
 @register_llm
@@ -289,6 +307,35 @@ class SpeachesLLMConfiguration(BaseLLMConfiguration):
         description="OpenAI-compatible endpoint (Ollama, vLLM, etc.)",
     )
     api_key: str | list[str] | None = Field(default=None)
+
+
+@register_llm
+class AnthropicLLMService(BaseLLMConfiguration):
+    provider: Literal[ServiceProviders.ANTHROPIC] = ServiceProviders.ANTHROPIC
+    model: str = Field(
+        default="claude-sonnet-4-6-20251015",
+        json_schema_extra={"examples": ANTHROPIC_MODELS, "allow_custom_input": True},
+    )
+
+
+@register_llm
+class NoralAILLMService(BaseLLMConfiguration):
+    """NoralAI-hosted LLM endpoint (OpenAI-compatible).
+
+    Use this when calling a NoralAI-operated inference server (e.g. a RunPod
+    vLLM deployment exposing the OpenAI Chat Completions API). The base_url
+    is editable per workflow so multiple environments can coexist.
+    """
+
+    provider: Literal[ServiceProviders.NORALAI] = ServiceProviders.NORALAI
+    model: str = Field(
+        default="noral-voice-default",
+        json_schema_extra={"examples": NORALAI_MODELS, "allow_custom_input": True},
+    )
+    base_url: str = Field(
+        default="https://llm.noral.ai/v1",
+        description="OpenAI-compatible base URL for the NoralAI inference endpoint",
+    )
 
 
 OPENAI_REALTIME_MODELS = ["gpt-4o-realtime-preview", "gpt-4o-mini-realtime-preview"]
@@ -397,6 +444,8 @@ LLMConfig = Annotated[
         DograhLLMService,
         AWSBedrockLLMConfiguration,
         SpeachesLLMConfiguration,
+        AnthropicLLMService,
+        NoralAILLMService,
     ],
     Field(discriminator="provider"),
 ]

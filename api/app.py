@@ -26,7 +26,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 
-from api.constants import REDIS_URL
+from api.constants import CORS_ALLOWED_ORIGINS, REDIS_URL
 from api.mcp_server import mcp
 from api.routes.main import router as main_router
 from api.services.pipecat.tracing_config import (
@@ -71,25 +71,27 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Dograh API",
-    description="API for the Dograh app",
+    title="NoralVoice API",
+    description="API for NoralVoice — voice agent platform by NoralAI",
     version="1.0.0",
     openapi_url=f"{API_PREFIX}/openapi.json",
     lifespan=lifespan,
     servers=[
-        {"url": "https://app.dograh.com", "description": "Production"},
+        {"url": "https://voice.noral.ai", "description": "Production"},
         {"url": "http://localhost:8000", "description": "Local development"},
     ],
 )
 
 
-# Configure CORS
+# Configure CORS. Explicit allow-list — wildcards combined with
+# `allow_credentials=True` are rejected by browsers and unsafe. The
+# allow-list is sourced from CORS_ALLOWED_ORIGINS (see api.constants).
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=CORS_ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 api_router = APIRouter()

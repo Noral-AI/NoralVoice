@@ -10,6 +10,7 @@ from api.db import db_client
 from api.db.models import UserModel
 from api.enums import PostHogEvent
 from api.schemas.user_configuration import UserConfiguration
+from api.services.auth.noral_sso import get_user_from_noralos_session
 from api.services.auth.stack_auth import stackauth
 from api.services.configuration.registry import ServiceProviders
 from api.services.posthog_client import capture_event
@@ -19,12 +20,34 @@ from api.utils.auth import decode_jwt_token
 async def get_user(
     authorization: Annotated[str | None, Header()] = None,
     x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
+    cookie: Annotated[str | None, Header()] = None,
 ) -> UserModel:
     # ------------------------------------------------------------------
     # Check if API key is provided (takes precedence)
     # ------------------------------------------------------------------
     if x_api_key:
         return await _handle_api_key_auth(x_api_key)
+
+    # ------------------------------------------------------------------
+    # Cross-product SSO: when AUTH_PROVIDER=noral, forward the inbound
+    # Cookie header to agent.noral.ai's Better Auth session endpoint and
+    # find-or-create a local user from the result.
+    #
+    # If SSO succeeds → return that user.
+    # If SSO returns None (no cookie / expired / agent.noral.ai
+    # unreachable) → fall through to local-auth so users with a direct
+    # email/password account can still sign in. This is the "SSO +
+    # fallback" mode — covers the agent.noral.ai-is-down case AND lets
+    # users who never created a NoralOS account use their direct
+    # voice.noral.ai credential.
+    # ------------------------------------------------------------------
+    if AUTH_PROVIDER == "noral":
+        sso_user = await get_user_from_noralos_session(cookie)
+        if sso_user is not None:
+            return sso_user
+        # Fall through: try local email/password as a fallback. If that
+        # also fails, _handle_oss_auth raises 401 with a clearer message.
+        return await _handle_oss_auth(authorization)
 
     # ------------------------------------------------------------------
     # Check if we're using local (email/password) auth
@@ -227,7 +250,7 @@ async def create_user_configuration_with_mps_key(
             response = await client.post(
                 f"{MPS_API_URL}/api/v1/service-keys/",
                 json={
-                    "name": f"Default Dograh Model Service Key",
+                    "name": f"Default Model Service Key",
                     "description": "Auto-generated key for OSS user",
                     "expires_in_days": 7,  # Short-lived for OSS
                     "created_by": user_provider_id,
@@ -245,7 +268,7 @@ async def create_user_configuration_with_mps_key(
             response = await client.post(
                 f"{MPS_API_URL}/api/v1/service-keys/",
                 json={
-                    "name": f"Default Dograh Model Service Key",
+                    "name": f"Default Model Service Key",
                     "description": f"Auto-generated key for organization {organization_id}",
                     "organization_id": organization_id,
                     "expires_in_days": 90,  # Longer-lived for authenticated users

@@ -1,0 +1,16 @@
+# Override pinning api+ui to locally-built images + injecting SSO + Google OAuth env.
+# Updated 2026-05-17 after Google OAuth ship (rebrand-v8).
+services:
+  api:
+    image: noralvoice-api:rebrand-v8
+    environment:
+      AUTH_PROVIDER: "${AUTH_PROVIDER:-local}"
+      NORALOS_SESSION_VALIDATE_URL: "${NORALOS_SESSION_VALIDATE_URL:-https://agent.noral.ai/api/auth/get-session}"
+      GOOGLE_OAUTH_ENABLED: "${GOOGLE_OAUTH_ENABLED:-false}"
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-}"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:-}"
+      GOOGLE_OAUTH_REDIRECT_URI: "${GOOGLE_OAUTH_REDIRECT_URI:-https://voice.noral.ai/api/v1/auth/google/callback}"
+      UI_APP_URL: "${UI_APP_URL:?required - was defaulting to http://localhost:3010}"
+      GOOGLE_OAUTH_POST_LOGIN_REDIRECT: "${GOOGLE_OAUTH_POST_LOGIN_REDIRECT:-https://voice.noral.ai/after-sign-in}"
+  ui:
+    image: noralvoice-ui:rebrand-v11

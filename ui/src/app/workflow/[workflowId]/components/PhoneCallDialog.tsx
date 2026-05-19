@@ -171,7 +171,7 @@ export const PhoneCallDialog = ({
 
     const handleConfigureContinue = () => {
         onOpenChange(false);
-        router.push('/telephony-configurations');
+        router.push('/settings?tab=telephony');
     };
 
     const handleStartCall = async () => {
@@ -332,7 +332,7 @@ export const PhoneCallDialog = ({
                     variant="outline"
                     onClick={() => {
                         onOpenChange(false);
-                        router.push('/telephony-configurations');
+                        router.push('/settings?tab=telephony');
                     }}
                 >
                     Configure Telephony

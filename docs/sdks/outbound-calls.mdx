@@ -15,8 +15,8 @@ Use the SDK to place a test outbound call from a specific agent to a phone numbe
 
 <CodeGroup>
 ```python Python
-from dograh_sdk import DograhClient
-from dograh_sdk._generated_models import InitiateCallRequest
+from noralai_voice import DograhClient
+from noralai_voice._generated_models import InitiateCallRequest
 
 with DograhClient(api_key="YOUR_API_KEY") as client:
     client.test_phone_call(
@@ -27,7 +27,7 @@ with DograhClient(api_key="YOUR_API_KEY") as client:
     )
 ```
 ```typescript TypeScript
-import { DograhClient } from "@dograh/sdk";
+import { DograhClient } from "@noralai/voice-sdk";
 
 const client = new DograhClient({ apiKey: "YOUR_API_KEY" });
 
