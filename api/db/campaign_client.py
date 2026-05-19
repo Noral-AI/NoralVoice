@@ -244,6 +244,24 @@ class CampaignClient(BaseDBClient):
                         "initial_context": run.initial_context,
                         "gathered_context": run.gathered_context,
                         "call_type": run.call_type,
+                        "created_by_external": (
+                            {
+                                "actor_id": run.created_by_external_actor_id,
+                                "run_id": run.created_by_external_run_id,
+                                "label": run.created_by_external_label,
+                            }
+                            if run.created_by_external_actor_id
+                            else None
+                        ),
+                        "last_modified_by_external": (
+                            {
+                                "actor_id": run.last_modified_by_external_actor_id,
+                                "run_id": run.last_modified_by_external_run_id,
+                                "label": run.last_modified_by_external_label,
+                            }
+                            if run.last_modified_by_external_actor_id
+                            else None
+                        ),
                     }
                 )
                 for run in result.scalars().all()
