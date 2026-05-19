@@ -3,6 +3,7 @@ from api.db.api_key_client import APIKeyClient
 from api.db.campaign_client import CampaignClient
 from api.db.embed_exchange_token_client import EmbedExchangeTokenClient
 from api.db.embed_token_client import EmbedTokenClient
+from api.db.external_actor_client import ExternalActorClient
 from api.db.integration_client import IntegrationClient
 from api.db.integration_webhook_client import IntegrationWebhookClient
 from api.db.knowledge_base_client import KnowledgeBaseClient
@@ -45,6 +46,7 @@ class DBClient(
     WorkflowRecordingClient,
     TelephonyConfigurationClient,
     TelephonyPhoneNumberClient,
+    ExternalActorClient,
 ):
     """
     Unified database client that combines all specialized database operations.

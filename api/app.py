@@ -29,6 +29,10 @@ from loguru import logger
 from api.constants import CORS_ALLOWED_ORIGINS, REDIS_URL
 from api.mcp_server import mcp
 from api.routes.main import router as main_router
+from api.services.auth.external_actor_events import (
+    register_external_actor_listeners,
+)
+from api.services.auth.external_actor_middleware import external_actor_middleware
 from api.services.pipecat.tracing_config import (
     handle_langfuse_sync,
     load_all_org_langfuse_credentials,
@@ -39,6 +43,11 @@ from api.services.worker_sync.manager import (
 )
 from api.services.worker_sync.protocol import WorkerSyncEventType
 from api.tasks.arq import get_arq_redis
+
+# Register the SQLAlchemy event listeners that stamp Phase-7.5 attribution
+# columns onto rows touched by external-actor-attributed requests. Idempotent
+# — safe to call at module import time.
+register_external_actor_listeners()
 
 API_PREFIX = "/api/v1"
 
@@ -93,6 +102,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Phase-7.5 cross-system attribution: resolve the calling NoralOS agent from
+# request headers and stamp attribution columns onto rows it writes. No-op
+# when the headers are absent or EXTERNAL_ACTOR_HEADERS_ENABLED=false.
+app.middleware("http")(external_actor_middleware)
 
 api_router = APIRouter()
 
