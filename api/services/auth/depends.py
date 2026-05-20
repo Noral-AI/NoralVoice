@@ -129,19 +129,11 @@ async def get_user(
             # Update the user_model object to reflect the change
             user_model.selected_organization_id = organization.id
 
-            # Only create default configuration if organization was just created
-            # This prevents race conditions where multiple concurrent requests
-            # might try to create configurations
-            if org_was_created:
-                existing_cfg = await db_client.get_user_configurations(user_model.id)
-                if not (existing_cfg.llm or existing_cfg.tts or existing_cfg.stt):
-                    mps_config = await create_user_configuration_with_mps_key(
-                        user_model.id, organization.id, stack_user["id"]
-                    )
-                    if mps_config:
-                        await db_client.update_user_configuration(
-                            user_model.id, mps_config
-                        )
+            # Default service configuration is intentionally NOT seeded.
+            # NoralVoice users configure their own LLM/STT/TTS via Settings;
+            # the previous behavior auto-seeded DOGRAH-provider config via a
+            # call to services.dograh.com, which is unreachable for us and
+            # broke first-time saves with "Invalid DOGRAH API key" errors.
 
     except Exception as exc:
         raise HTTPException(
