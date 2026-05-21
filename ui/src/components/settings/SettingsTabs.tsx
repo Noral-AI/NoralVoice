@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { usePathname,useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo } from "react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,7 +8,6 @@ import { useAppConfig } from "@/context/AppConfigContext";
 
 import ApiKeysTab from "./tabs/ApiKeysTab";
 import CloudServicesTab from "./tabs/CloudServicesTab";
-import IntegrationsTab from "./tabs/IntegrationsTab";
 import ModelsTab from "./tabs/ModelsTab";
 import OrganizationTab from "./tabs/OrganizationTab";
 import PlatformTab from "./tabs/PlatformTab";
@@ -20,7 +19,6 @@ import WebhookAuthTab from "./tabs/WebhookAuthTab";
 type TabId =
   | "profile"
   | "organization"
-  | "integrations"
   | "telephony"
   | "models"
   | "webhook-auth"
@@ -32,7 +30,6 @@ type TabId =
 const ALL_TABS: ReadonlyArray<{ id: TabId; label: string }> = [
   { id: "profile", label: "Profile" },
   { id: "organization", label: "Organization" },
-  { id: "integrations", label: "Integrations" },
   { id: "telephony", label: "Telephony" },
   { id: "models", label: "Models" },
   { id: "webhook-auth", label: "Webhook auth" },
@@ -116,8 +113,6 @@ function renderTab(id: TabId) {
       return <ProfileTab />;
     case "organization":
       return <OrganizationTab />;
-    case "integrations":
-      return <IntegrationsTab />;
     case "telephony":
       return <TelephonyTab />;
     case "models":
