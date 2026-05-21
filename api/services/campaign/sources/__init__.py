@@ -1,5 +1,5 @@
 """Campaign source sync services"""
 
-from .google_sheets import GoogleSheetsSyncService
+from .csv import CSVSyncService
 
-__all__ = ["GoogleSheetsSyncService"]
+__all__ = ["CSVSyncService"]
