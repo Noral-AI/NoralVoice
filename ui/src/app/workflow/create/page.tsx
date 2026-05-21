@@ -67,9 +67,18 @@ export default function CreateWorkflowPage() {
             if (response.data?.id) {
                 setWorkflowId(String(response.data.id));
                 setShowSuccessModal(true);
+            } else if (response.error) {
+                const status = response.response?.status;
+                const detail = (response.error as { detail?: unknown })?.detail;
+                const detailStr = typeof detail === 'string' ? detail : JSON.stringify(detail ?? response.error);
+                setError(`Failed to create workflow${status ? ` (${status})` : ''}: ${detailStr}`);
+                logger.error(`Workflow create returned non-2xx`, response.error);
+            } else {
+                setError('Workflow creation returned no data. Please try again.');
+                logger.error('Workflow create returned empty response', response);
             }
         } catch (err) {
-            setError('Failed to create workflow. Please try again.');
+            setError(`Failed to create workflow: ${err instanceof Error ? err.message : String(err)}`);
             logger.error(`Error creating workflow: ${err}`);
         } finally {
             setIsLoading(false);

@@ -69,9 +69,17 @@ class UserConfigurationValidator:
         }
         status_list = []
 
+        # STT and TTS are required at runtime (voice pipeline can't start
+        # without them) but NOT at save-time. Users save these one tab at a
+        # time in the UI — blocking save until all three are configured
+        # creates an unsolvable chicken-and-egg for new users.
         status_list.extend(self._validate_service(configuration.llm, "llm"))
-        status_list.extend(self._validate_service(configuration.stt, "stt"))
-        status_list.extend(self._validate_service(configuration.tts, "tts"))
+        status_list.extend(
+            self._validate_service(configuration.stt, "stt", required=False)
+        )
+        status_list.extend(
+            self._validate_service(configuration.tts, "tts", required=False)
+        )
         # Embeddings is optional - only validate if configured
         status_list.extend(
             self._validate_service(
