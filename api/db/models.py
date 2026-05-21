@@ -636,8 +636,8 @@ class CampaignModel(Base):
     )
 
     # Source configuration
-    source_type = Column(String, nullable=False, default="google-sheet")
-    source_id = Column(String, nullable=False)  # Sheet URL
+    source_type = Column(String, nullable=False, default="csv")
+    source_id = Column(String, nullable=False)  # CSV file key
 
     # State management
     state = Column(

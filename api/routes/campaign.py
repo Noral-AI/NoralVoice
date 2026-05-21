@@ -153,8 +153,8 @@ class CircuitBreakerConfigResponse(BaseModel):
 class CreateCampaignRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     workflow_id: int
-    source_type: str = Field(..., pattern="^(google-sheet|csv)$")
-    source_id: str  # Google Sheet URL or CSV file key
+    source_type: str = Field(..., pattern="^csv$")
+    source_id: str  # CSV file key
     # Optional during the legacy → multi-config migration window. Required in
     # a follow-up. When omitted, the dispatcher falls back to the org's
     # default config.
