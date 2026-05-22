@@ -3,7 +3,6 @@
 import type { Team } from "@stackframe/stack";
 import {
   AlertTriangle,
-  AudioLines,
   ChevronLeft,
   ChevronRight,
   Database,
@@ -23,7 +22,6 @@ import { usePathname, useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 
 import { getAuthUserApiV1UserAuthUserGet } from "@/client/sdk.gen";
-
 import ThemeToggle from "@/components/ThemeSwitcher";
 import { Button } from "@/components/ui/button";
 import {
@@ -108,11 +106,6 @@ const NAV_SECTIONS: SidebarNavSection[] = [
         title: "Files",
         url: "/files",
         icon: Database,
-      },
-      {
-        title: "Recordings",
-        url: "/recordings",
-        icon: AudioLines,
       },
     ],
   },

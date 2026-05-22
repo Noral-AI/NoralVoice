@@ -1278,8 +1278,8 @@ function WorkflowSettingsInner({
                                 </CardHeader>
                                 <CardFooter className="border-t pt-6">
                                     <Button variant="outline" asChild>
-                                        <Link href="/recordings">
-                                            Go to Recordings
+                                        <Link href="/files?tab=audio">
+                                            Go to Audio Library
                                             <ExternalLink className="ml-2 h-4 w-4" />
                                         </Link>
                                     </Button>
