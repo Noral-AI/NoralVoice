@@ -9,6 +9,16 @@ import {
   updatePhoneNumberApiV1OrganizationsTelephonyConfigsConfigIdPhoneNumbersPhoneNumberIdPut,
 } from "@/client/sdk.gen";
 import type { PhoneNumberResponse } from "@/client/types.gen";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -79,6 +89,7 @@ export function PhoneNumberDialog({
   const [workflows, setWorkflows] = useState<{ id: number; name: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [addressTouched, setAddressTouched] = useState(false);
+  const [noWorkflowConfirmOpen, setNoWorkflowConfirmOpen] = useState(false);
 
   // Reset form when the dialog opens.
   useEffect(() => {
@@ -124,7 +135,19 @@ export function PhoneNumberDialog({
         toast.error(err);
         return;
       }
+      // Create-with-no-workflow leaves the provider's VoiceUrl on its default
+      // (e.g. Twilio's demo greeting) because the backend only PATCHes when an
+      // inbound_workflow_id is set on create. Make the user confirm before we
+      // ship a number that silently won't answer inbound calls.
+      if (inboundWorkflowId === NO_WORKFLOW) {
+        setNoWorkflowConfirmOpen(true);
+        return;
+      }
     }
+    await submitNow();
+  };
+
+  const submitNow = async () => {
     setSubmitting(true);
     try {
       const token = await getAccessToken();
@@ -299,6 +322,35 @@ export function PhoneNumberDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <AlertDialog
+        open={noWorkflowConfirmOpen}
+        onOpenChange={setNoWorkflowConfirmOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>No inbound workflow selected</AlertDialogTitle>
+            <AlertDialogDescription>
+              Without a workflow, this number won&apos;t answer inbound calls —
+              callers will hear the provider&apos;s default message (e.g.
+              Twilio&apos;s &ldquo;this number has not been configured&rdquo;
+              greeting). Add it anyway only if you plan to use it for caller ID
+              or outbound calls only.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Choose a workflow</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setNoWorkflowConfirmOpen(false);
+                void submitNow();
+              }}
+            >
+              Add anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
