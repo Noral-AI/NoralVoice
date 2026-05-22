@@ -98,6 +98,8 @@ function RenderWorkflow({ initialWorkflowName, workflowId, workflowUuid, initial
         onEdgesChange,
         onNodesChange,
         onRun,
+        applyWorkflowErrors,
+        validateWorkflow,
     } = useWorkflowState({
         initialWorkflowName,
         workflowId,
@@ -356,6 +358,8 @@ function RenderWorkflow({ initialWorkflowName, workflowId, workflowUuid, initial
                     hasDraft={hasDraft}
                     onPublished={handlePublished}
                     renameWorkflow={renameWorkflow}
+                    applyWorkflowErrors={applyWorkflowErrors}
+                    validateWorkflow={validateWorkflow}
                 />
 
                 {/* Workflow Canvas */}

@@ -566,6 +566,12 @@ export const useWorkflowState = ({
         saveTemplateContextVariables,
         saveWorkflowConfigurations,
         saveDictionary,
+        // Validation-error surfacing — exposed so publish can refresh canvas
+        // highlights from a 422 response shape that the toast-promise path
+        // can't see (the generated client returns {data, error}, never
+        // rejects on 4xx).
+        applyWorkflowErrors,
+        validateWorkflow,
         // Export undo/redo state
         undo,
         redo,
@@ -573,3 +579,8 @@ export const useWorkflowState = ({
         canRedo,
     };
 };
+
+// Re-export so callers (e.g. WorkflowEditorHeader) can normalise a 422 body
+// from the publish endpoint into the same WorkflowError[] shape that
+// applyWorkflowErrors expects.
+export { extractWorkflowErrors };
