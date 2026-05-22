@@ -125,6 +125,18 @@ export function ServiceConfigurationForm({
         embeddings: [""],
         realtime: [""],
     });
+    // Per-(service, provider) cache so switching the Provider dropdown and back
+    // restores the previously-entered key instead of forcing a re-type. The
+    // primary `apiKeys` state mirrors the cache entry for the currently-selected
+    // provider; the cache also holds entries for providers the user has switched
+    // away from in this session.
+    const [apiKeysByProvider, setApiKeysByProvider] = useState<Record<ServiceSegment, Record<string, string[]>>>({
+        llm: {},
+        tts: {},
+        stt: {},
+        embeddings: {},
+        realtime: {},
+    });
     const [isCustomInput, setIsCustomInput] = useState<Record<string, boolean>>({});
 
     // Override-specific state: which services have the override toggle enabled
@@ -314,6 +326,18 @@ export function ServiceConfigurationForm({
 
             reset(defaultValues);
             setApiKeys(loadedApiKeys);
+            // Seed per-provider cache with the values just loaded for each service's
+            // currently-selected provider. Existing cache entries for other providers
+            // (set during this session) are preserved.
+            setApiKeysByProvider(prev => {
+                const next = { ...prev };
+                (["llm", "tts", "stt", "embeddings", "realtime"] as ServiceSegment[]).forEach(svc => {
+                    const provider = selectedProviders[svc];
+                    if (!provider) return;
+                    next[svc] = { ...next[svc], [provider]: loadedApiKeys[svc] };
+                });
+                return next;
+            });
             setServiceProviders(selectedProviders);
             setIsCustomInput(detectedCustomInput);
         };
@@ -372,8 +396,30 @@ export function ServiceConfigurationForm({
 
         preservedValues[`${service}_provider`] = providerName;
         reset(preservedValues);
+
+        // Stash the current input under the old provider so the user can switch
+        // back without re-typing, then restore whatever we have cached for the
+        // new provider (empty array means we've never seen a key for it).
+        const oldProvider = serviceProviders[service];
+        const currentKeys = apiKeys[service];
+        setApiKeysByProvider(prev => {
+            const next = { ...prev };
+            const serviceCache = { ...next[service] };
+            if (oldProvider) {
+                serviceCache[oldProvider] = currentKeys;
+            }
+            next[service] = serviceCache;
+            return next;
+        });
+        const cachedForNewProvider = apiKeysByProvider[service]?.[providerName];
+        setApiKeys(prev => ({
+            ...prev,
+            [service]: cachedForNewProvider && cachedForNewProvider.length > 0
+                ? cachedForNewProvider
+                : [""],
+        }));
+
         setServiceProviders(prev => ({ ...prev, [service]: providerName }));
-        setApiKeys(prev => ({ ...prev, [service]: [""] }));
 
         setIsCustomInput(prev => {
             const next = { ...prev };
@@ -388,9 +434,17 @@ export function ServiceConfigurationForm({
         const config: Record<string, string | number | string[]> = {
             provider: serviceProviders[service],
         };
-        const keys = apiKeys[service].map(k => k.trim()).filter(k => k.length > 0);
-        if (keys.length > 0) {
-            config.api_key = mode === 'override' ? keys[0] : keys;
+        const trimmed = apiKeys[service].map(k => k.trim());
+        const nonEmpty = trimmed.filter(k => k.length > 0);
+        if (mode === 'override') {
+            // Always send api_key in override mode (possibly empty string) so the
+            // backend merge can distinguish three intents:
+            //   - empty  → explicit clear (fall back to global key)
+            //   - masked → preserved against existing real key
+            //   - new    → stored as-is
+            config.api_key = nonEmpty.length > 0 ? nonEmpty[0] : "";
+        } else if (nonEmpty.length > 0) {
+            config.api_key = nonEmpty;
         }
         Object.entries(data).forEach(([property, value]) => {
             if (!property.startsWith(`${service}_`)) return;
