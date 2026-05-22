@@ -7,6 +7,7 @@ import posthog from "posthog-js";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { extractWorkflowErrors } from "@/app/workflow/[workflowId]/hooks/useWorkflowState";
 import {
     duplicateWorkflowEndpointApiV1WorkflowWorkflowIdDuplicatePost,
     publishWorkflowApiV1WorkflowWorkflowIdPublishPost,
@@ -48,6 +49,12 @@ interface WorkflowEditorHeaderProps {
     hasDraft: boolean;
     onPublished: () => void;
     renameWorkflow: (newName: string) => Promise<void>;
+    // Surface validation errors from a publish 422 the same way validate does:
+    // highlight in canvas + populate the errors popover.
+    applyWorkflowErrors: (errors: WorkflowError[]) => void;
+    // Re-run validate to refresh canvas state after a publish failure (the
+    // server may have surfaced new errors not yet in the local store).
+    validateWorkflow: () => Promise<void>;
 }
 
 export const WorkflowEditorHeader = ({
@@ -67,6 +74,8 @@ export const WorkflowEditorHeader = ({
     workflowId,
     workflowUuid,
     renameWorkflow,
+    applyWorkflowErrors,
+    validateWorkflow,
 }: WorkflowEditorHeaderProps) => {
     const router = useRouter();
     const { toggleSidebar } = useSidebar();
@@ -98,17 +107,43 @@ export const WorkflowEditorHeader = ({
     const handlePublish = async () => {
         if (publishing) return;
         setPublishing(true);
-        const promise = publishWorkflowApiV1WorkflowWorkflowIdPublishPost({
-            path: { workflow_id: workflowId },
-        });
-        toast.promise(promise, {
-            loading: "Publishing...",
-            success: "Workflow published successfully",
-            error: "Failed to publish workflow",
-        });
+        const loadingToast = toast.loading("Publishing...");
         try {
-            await promise;
+            const response = await publishWorkflowApiV1WorkflowWorkflowIdPublishPost({
+                path: { workflow_id: workflowId },
+            });
+            toast.dismiss(loadingToast);
+
+            // The auto-generated client returns {data, error} and never
+            // rejects on 4xx, so toast.promise can't see a 422 — the previous
+            // implementation always showed "published successfully". Inspect
+            // response.error explicitly here.
+            if (response.error) {
+                const errors = extractWorkflowErrors(response.error);
+                if (errors.length > 0) {
+                    // Mirror validate's UX: highlight offending nodes/edges in
+                    // canvas, populate the errors popover, and announce the
+                    // count so the user knows to look there.
+                    applyWorkflowErrors(errors);
+                    toast.error(
+                        `Can't publish: ${errors.length} validation ${errors.length === 1 ? "error" : "errors"}. See the errors panel.`,
+                    );
+                } else {
+                    toast.error("Failed to publish workflow");
+                }
+                return;
+            }
+
+            toast.success("Workflow published successfully");
             onPublished();
+        } catch (err) {
+            // Network or other unexpected failure (not a structured 4xx).
+            toast.dismiss(loadingToast);
+            toast.error("Failed to publish workflow");
+            // Re-validate so any latent state shows up in the errors panel,
+            // matching the post-save validation refresh pattern.
+            void validateWorkflow();
+            console.error("Publish failed", err);
         } finally {
             setPublishing(false);
         }
