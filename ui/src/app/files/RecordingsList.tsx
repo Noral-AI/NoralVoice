@@ -1,6 +1,7 @@
 "use client";
 
 import { AudioLines, Check, Pause, Pencil, Play, RefreshCw, Search, Trash2, X } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -205,9 +206,19 @@ export default function RecordingsList({ refreshKey }: { refreshKey?: number }) 
                     <AudioLines className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                     <p className="text-muted-foreground">
                         {searchQuery
-                            ? "No recordings match your search"
-                            : "No recordings yet"}
+                            ? "No audio clips match your search"
+                            : "No audio clips yet"}
                     </p>
+                    {!searchQuery && (
+                        <p className="mt-3 text-sm text-muted-foreground max-w-md mx-auto">
+                            Looking for <span className="font-medium">call recordings</span> from
+                            completed runs? Open an Agent Run from{" "}
+                            <Link href="/workflow" className="underline hover:text-foreground">
+                                Voice Agents
+                            </Link>
+                            .
+                        </p>
+                    )}
                 </div>
             ) : (
                 <div className="space-y-3">

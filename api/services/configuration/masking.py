@@ -129,6 +129,68 @@ def mask_user_config(config: UserConfiguration) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Workflow model_overrides helpers – mask api_keys before client exposure
+# ---------------------------------------------------------------------------
+
+_OVERRIDE_SERVICES = ("llm", "tts", "stt", "embeddings", "realtime")
+
+
+def mask_model_overrides(
+    model_overrides: Optional[Dict[str, Any]],
+) -> Optional[Dict[str, Any]]:
+    """Return a deep copy of *model_overrides* with every api_key masked.
+
+    ``model_overrides`` is stored as a free-form ``dict`` on
+    ``workflow.workflow_configurations``. Each per-service block may carry an
+    ``api_key`` field (string or list of strings). The top-level
+    ``is_realtime`` flag is passed through unchanged.
+    """
+    if not model_overrides:
+        return model_overrides
+
+    import copy
+
+    masked = copy.deepcopy(model_overrides)
+    for service in _OVERRIDE_SERVICES:
+        svc_cfg = masked.get(service)
+        if not isinstance(svc_cfg, dict):
+            continue
+        raw = svc_cfg.get("api_key")
+        if not raw:
+            continue
+        if isinstance(raw, list):
+            svc_cfg["api_key"] = [mask_key(k) for k in raw]
+        else:
+            svc_cfg["api_key"] = mask_key(raw)
+    return masked
+
+
+def mask_workflow_configurations(
+    workflow_configurations: Optional[Dict[str, Any]],
+) -> Optional[Dict[str, Any]]:
+    """Return *workflow_configurations* with any ``model_overrides`` api_keys masked.
+
+    Shallow-copies the top-level dict so other fields (dictionary, voicemail
+    detection, template variables, etc.) are returned by reference unchanged.
+    Only the ``model_overrides`` sub-tree is deep-copied and masked.
+    """
+    if not workflow_configurations:
+        return workflow_configurations
+
+    overrides = workflow_configurations.get("model_overrides")
+    if not overrides:
+        return workflow_configurations
+
+    masked_overrides = mask_model_overrides(overrides)
+    if masked_overrides is overrides:
+        return workflow_configurations
+
+    out = dict(workflow_configurations)
+    out["model_overrides"] = masked_overrides
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Workflow definition helpers – mask / merge QA-node API keys
 # ---------------------------------------------------------------------------
 
