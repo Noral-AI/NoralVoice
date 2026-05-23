@@ -223,6 +223,40 @@ def _validation_errors_http_exception(
     )
 
 
+async def _validate_model_overrides(model_overrides: dict, user: UserModel) -> None:
+    """Resolve model_overrides onto the user's global config and validate it.
+
+    Raises HTTPException(422) if the overrides are missing required fields
+    (e.g. a new LLM provider without an api_key) or if the resulting effective
+    config fails the same checks the user-configurations endpoint runs.
+    Run at every save and at publish — a published version that fails this
+    will dead-air every inbound call because the pipeline can't construct
+    the LLM service.
+    """
+    user_config = await db_client.get_user_configurations(user.id)
+    try:
+        effective = resolve_effective_config(user_config, model_overrides)
+    except ValidationError as e:
+        # Surface the first Pydantic field error in a way the editor can show.
+        first = e.errors()[0] if e.errors() else {}
+        loc = ".".join(str(p) for p in first.get("loc", ()))
+        msg = first.get("msg", str(e))
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid model_overrides ({loc or 'unknown field'}): {msg}",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    try:
+        await UserConfigurationValidator().validate(
+            effective,
+            organization_id=user.selected_organization_id,
+            created_by=user.provider_id,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+
 class CallDispositionCodes(BaseModel):
     disposition_codes: list[str] = []
 
@@ -768,6 +802,14 @@ async def publish_workflow(
     if errors:
         raise _validation_errors_http_exception(errors)
 
+    # The draft's model_overrides may have been saved before this validator
+    # existed (or through a code path that didn't enforce it). Re-check now
+    # so a malformed override can't reach the runtime pipeline, which would
+    # dead-air every inbound call.
+    draft_configs = draft.workflow_configurations or {}
+    if draft_configs.get("model_overrides"):
+        await _validate_model_overrides(draft_configs["model_overrides"], user)
+
     try:
         published = await db_client.publish_workflow_draft(workflow_id)
     except ValueError as e:
@@ -939,19 +981,10 @@ async def update_workflow(
         if request.workflow_configurations and request.workflow_configurations.get(
             "model_overrides"
         ):
-            user_config = await db_client.get_user_configurations(user.id)
-            try:
-                effective = resolve_effective_config(
-                    user_config,
-                    request.workflow_configurations["model_overrides"],
-                )
-                await UserConfigurationValidator().validate(
-                    effective,
-                    organization_id=user.selected_organization_id,
-                    created_by=user.provider_id,
-                )
-            except ValueError as e:
-                raise HTTPException(status_code=422, detail=str(e))
+            await _validate_model_overrides(
+                request.workflow_configurations["model_overrides"],
+                user,
+            )
 
         # Reject upfront if any new trigger path collides with another
         # workflow's trigger — keeps the workflow record from
