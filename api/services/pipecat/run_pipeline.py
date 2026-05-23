@@ -160,9 +160,8 @@ async def run_pipeline_telephony(
             audio_config=audio_config,
         )
     except Exception as e:
-        logger.error(
-            f"[run {workflow_run_id}] Error in {provider_name} pipeline: {e}",
-            exc_info=True,
+        logger.opt(exception=True).error(
+            f"[run {workflow_run_id}] Error in {provider_name} pipeline: {e!r}"
         )
         raise
 

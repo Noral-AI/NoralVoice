@@ -255,7 +255,9 @@ def register_event_handlers(
                 )
             )
         except Exception as e:
-            logger.error(f"Error recording circuit breaker failure: {e}", exc_info=True)
+            logger.opt(exception=True).error(
+                f"Error recording circuit breaker failure: {e!r}"
+            )
 
         await engine.end_call_with_reason(
             EndTaskReason.PIPELINE_ERROR.value, abort_immediately=True
@@ -313,9 +315,8 @@ def register_event_handlers(
                     workflow_run.workflow_id, disposition_code
                 )
             except Exception as e:
-                logger.error(
-                    f"Error storing disposition code in workflow: {e}",
-                    exc_info=True,
+                logger.opt(exception=True).error(
+                    f"Error storing disposition code in workflow: {e!r}"
                 )
 
         # Clean up engine resources (including voicemail detector)
@@ -380,7 +381,9 @@ def register_event_handlers(
                     f"Saved {len(feedback_events)} feedback events to workflow run logs"
                 )
             except Exception as e:
-                logger.error(f"Error saving realtime feedback logs: {e}", exc_info=True)
+                logger.opt(exception=True).error(
+                    f"Error saving realtime feedback logs: {e!r}"
+                )
         else:
             logger.debug("Logs buffer is empty, skipping save")
 
@@ -399,7 +402,9 @@ def register_event_handlers(
                 logger.debug("No transcript events in logs buffer, skipping upload")
 
         except Exception as e:
-            logger.error(f"Error preparing buffers for S3 upload: {e}", exc_info=True)
+            logger.opt(exception=True).error(
+                f"Error preparing buffers for S3 upload: {e!r}"
+            )
 
         # Combined task: uploads artifacts, runs integrations (including QA),
         # then calculates cost (so QA token usage is captured in usage_info)
