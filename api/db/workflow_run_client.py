@@ -433,6 +433,15 @@ class WorkflowRunClient(BaseDBClient):
                         f"run {run.id} (event={event}); continuing"
                     )
 
+            from api.services.n8n_lifecycle import (
+                enqueue_n8n_event,
+                n8n_event_for_run_state,
+            )
+
+            n8n_event = n8n_event_for_run_state(state)
+            if n8n_event is not None:
+                await enqueue_n8n_event(n8n_event, workflow_run_id=run.id)
+
         return run
 
     async def get_workflow_run_with_context(
