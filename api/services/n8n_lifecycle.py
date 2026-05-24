@@ -154,10 +154,15 @@ def build_workflow_run_n8n_payload(
         getattr(workflow, "organization_id", None) if workflow else None
     )
 
+    automation_slug = (
+        getattr(workflow, "n8n_automation_slug", None) if workflow else None
+    )
+
     payload = {
         "companyId": company_id,
         "accountId": company_id,
         "agentId": getattr(workflow, "id", None) if workflow else run.workflow_id,
+        "automationSlug": automation_slug,
         "workflowId": run.workflow_id,
         "workflowRunId": run.id,
         "callId": call_id,

@@ -1,13 +1,13 @@
 "use client";
 
 import { format } from "date-fns";
-import { ArrowLeft, BookA, CalendarIcon, Clipboard, Download, ExternalLink, FileDown, Fingerprint, Loader2, Mic, Pause, PhoneOff, Play, Settings, Trash2Icon, Upload, Variable, X } from "lucide-react";
+import { ArrowLeft, BookA, CalendarIcon, Clipboard, Download, ExternalLink, FileDown, Fingerprint, Loader2, Mic, Pause, PhoneOff, Play, Settings, Trash2Icon, Upload, Variable, Webhook, X } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { downloadWorkflowReportApiV1WorkflowWorkflowIdReportGet, getAmbientNoiseUploadUrlApiV1WorkflowAmbientNoiseUploadUrlPost, getWorkflowApiV1WorkflowFetchWorkflowIdGet } from "@/client/sdk.gen";
+import { downloadWorkflowReportApiV1WorkflowWorkflowIdReportGet, getAmbientNoiseUploadUrlApiV1WorkflowAmbientNoiseUploadUrlPost, getWorkflowApiV1WorkflowFetchWorkflowIdGet, updateWorkflowApiV1WorkflowWorkflowIdPut } from "@/client/sdk.gen";
 import type { WorkflowResponse } from "@/client/types.gen";
 import { FlowEdge, FlowNode } from "@/components/flow/types";
 import { LLMConfigSelector } from "@/components/LLMConfigSelector";
@@ -79,10 +79,17 @@ const NAV_ITEMS = [
     { id: "variables", label: "Template Variables", icon: Variable },
     { id: "dictionary", label: "Dictionary", icon: BookA },
     { id: "voicemail", label: "Voicemail Detection", icon: PhoneOff },
+    { id: "automations", label: "Automations", icon: Webhook },
     { id: "recordings", label: "Recordings", icon: Mic },
     { id: "report", label: "Report", icon: FileDown },
     { id: "identity", label: "Agent UUID", icon: Fingerprint },
 ];
+
+// Mirrors api.services.n8n_client.AUTOMATION_SLUG_PATTERN. Lowercase
+// alphanumerics separated by single dashes. Max 64 chars enforced by the
+// DB check constraint; we add it here so the user gets immediate feedback.
+const AUTOMATION_SLUG_REGEX = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+const MAX_AUTOMATION_SLUG_LENGTH = 64;
 
 // ---------------------------------------------------------------------------
 // Section: Report
@@ -994,6 +1001,122 @@ function VoicemailSection({
 }
 
 // ---------------------------------------------------------------------------
+// Section: Automations (n8n)
+// ---------------------------------------------------------------------------
+
+function AutomationsSection({
+    workflowId,
+    initialSlug,
+    onSlugSaved,
+}: {
+    workflowId: number;
+    initialSlug: string | null | undefined;
+    onSlugSaved: (slug: string | null) => void;
+}) {
+    const [slug, setSlug] = useState<string>(initialSlug || "");
+    const [isSaving, setIsSaving] = useState(false);
+
+    const normalized = slug.trim().toLowerCase();
+    const isCleared = normalized === "";
+    const isValid =
+        isCleared ||
+        (normalized.length <= MAX_AUTOMATION_SLUG_LENGTH &&
+            AUTOMATION_SLUG_REGEX.test(normalized));
+    const isDirty = (initialSlug || "") !== normalized;
+
+    useUnsavedChanges("automations", isDirty);
+
+    const validationMsg = isValid
+        ? null
+        : normalized.length > MAX_AUTOMATION_SLUG_LENGTH
+            ? `Slug exceeds ${MAX_AUTOMATION_SLUG_LENGTH} characters.`
+            : "Use lowercase letters, digits, and single dashes only — e.g. acme-roof-inbound.";
+
+    const handleSave = async () => {
+        if (!isValid || !isDirty) return;
+        setIsSaving(true);
+        try {
+            const res = await updateWorkflowApiV1WorkflowWorkflowIdPut({
+                path: { workflow_id: workflowId },
+                // Send empty string when clearing so backend treats it as
+                // a clear, not as "leave alone."
+                body: { n8n_automation_slug: normalized },
+            });
+            if (res.error) {
+                const detail = (res.error as { detail?: string })?.detail;
+                toast.error(detail || "Failed to save automation slug.");
+                return;
+            }
+            const savedSlug = isCleared ? null : normalized;
+            onSlugSaved(savedSlug);
+            setSlug(savedSlug || "");
+            toast.success(
+                isCleared
+                    ? "Automation slug cleared."
+                    : `Automation slug saved: ${normalized}`,
+            );
+        } catch (err) {
+            console.error("Failed to save automation slug:", err);
+            toast.error("Failed to save automation slug.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const webhookExample = normalized
+        ? `https://automation.noral.ai/webhook/noralvoice/${normalized}/call-completed`
+        : `https://automation.noral.ai/webhook/noralvoice/call-completed`;
+
+    return (
+        <Card id="automations">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                    <Webhook className="h-4 w-4" />
+                    Automations
+                </CardTitle>
+                <CardDescription>
+                    Route this agent&apos;s call events to a dedicated n8n workflow
+                    namespace. Each agent (inbound or outbound) can use its own
+                    slug so n8n runs different automations per agent.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="n8n_automation_slug" className="text-sm font-medium">
+                        Automation slug
+                    </Label>
+                    <Input
+                        id="n8n_automation_slug"
+                        value={slug}
+                        onChange={(e) => setSlug(e.target.value)}
+                        placeholder="e.g. acme-roof-inbound"
+                        spellCheck={false}
+                        autoCapitalize="off"
+                        autoCorrect="off"
+                        className={validationMsg ? "border-destructive" : undefined}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                        {validationMsg ??
+                            "Lowercase letters, digits, and single dashes. Leave blank to share the default unnamespaced webhook."}
+                    </p>
+                </div>
+                <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-1">
+                    <p className="font-medium text-muted-foreground">
+                        Webhook URL pattern (CALL_COMPLETED example)
+                    </p>
+                    <code className="block break-all font-mono">{webhookExample}</code>
+                </div>
+            </CardContent>
+            <CardFooter className="flex justify-end">
+                <Button onClick={handleSave} disabled={!isValid || !isDirty || isSaving}>
+                    {isSaving ? "Saving..." : "Save Automation Slug"}
+                </Button>
+            </CardFooter>
+        </Card>
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Section: Agent UUID
 // ---------------------------------------------------------------------------
 
@@ -1234,6 +1357,17 @@ function WorkflowSettingsInner({
                                 workflowConfigurations={workflowConfigurations}
                                 workflowName={workflowName}
                                 onSave={saveWorkflowConfigurations}
+                            />
+
+                            {/* Automations (n8n per-agent slug) */}
+                            <AutomationsSection
+                                workflowId={workflowId}
+                                initialSlug={workflow.n8n_automation_slug}
+                                onSlugSaved={(slug) =>
+                                    setWorkflow((prev) =>
+                                        prev ? { ...prev, n8n_automation_slug: slug } : prev,
+                                    )
+                                }
                             />
 
                             {/* Recordings – moved to org-level page */}

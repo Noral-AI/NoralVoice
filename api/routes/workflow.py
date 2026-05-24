@@ -26,6 +26,10 @@ from api.services.configuration.masking import (
 )
 from api.services.configuration.resolve import resolve_effective_config
 from api.services.mps_service_key_client import mps_service_key_client
+from api.services.n8n_client import (
+    InvalidAutomationSlugError,
+    validate_automation_slug,
+)
 from api.services.posthog_client import capture_event
 from api.services.reports import generate_workflow_report_csv
 from api.services.storage import storage_fs
@@ -275,6 +279,7 @@ class WorkflowResponse(BaseModel):
     version_number: int | None = None
     version_status: str | None = None
     workflow_uuid: str | None = None
+    n8n_automation_slug: str | None = None
 
 
 class WorkflowListResponse(BaseModel):
@@ -306,6 +311,7 @@ class WorkflowTemplateResponse(BaseModel):
 class CreateWorkflowRequest(BaseModel):
     name: str
     workflow_definition: dict
+    n8n_automation_slug: str | None = None
 
 
 class DuplicateTemplateRequest(BaseModel):
@@ -318,6 +324,9 @@ class UpdateWorkflowRequest(BaseModel):
     workflow_definition: dict | None = None
     template_context_variables: dict | None = None
     workflow_configurations: dict | None = None
+    # Sentinel semantics: empty string clears the slug, non-empty sets it,
+    # field omitted from the request leaves the existing value alone.
+    n8n_automation_slug: str | None = None
 
 
 class WorkflowVersionResponse(BaseModel):
@@ -452,11 +461,17 @@ async def create_workflow(
         except TriggerPathConflictError as e:
             raise _trigger_conflict_http_exception(workflow_definition, e.trigger_paths)
 
+    try:
+        slug = validate_automation_slug(request.n8n_automation_slug)
+    except InvalidAutomationSlugError as exc:
+        raise HTTPException(status_code=422, detail=f"Invalid n8n_automation_slug: {exc}")
+
     workflow = await db_client.create_workflow(
         request.name,
         workflow_definition,
         user.id,
         user.selected_organization_id,
+        n8n_automation_slug=slug,
     )
 
     capture_event(
@@ -487,6 +502,7 @@ async def create_workflow(
         "template_context_variables": workflow.template_context_variables,
         "call_disposition_codes": workflow.call_disposition_codes,
         "workflow_configurations": workflow.workflow_configurations,
+        "n8n_automation_slug": workflow.n8n_automation_slug,
     }
 
 
@@ -731,6 +747,7 @@ async def get_workflow(
         "version_number": active_def.version_number if active_def else None,
         "version_status": active_def.status if active_def else None,
         "workflow_uuid": workflow.workflow_uuid,
+        "n8n_automation_slug": workflow.n8n_automation_slug,
     }
 
 
@@ -1002,6 +1019,18 @@ async def update_workflow(
                         workflow_definition, e.trigger_paths
                     )
 
+        update_kwargs: dict = {}
+        if "n8n_automation_slug" in request.model_fields_set:
+            try:
+                update_kwargs["n8n_automation_slug"] = validate_automation_slug(
+                    request.n8n_automation_slug
+                )
+            except InvalidAutomationSlugError as exc:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Invalid n8n_automation_slug: {exc}",
+                )
+
         workflow = await db_client.update_workflow(
             workflow_id=workflow_id,
             name=request.name,
@@ -1009,6 +1038,7 @@ async def update_workflow(
             template_context_variables=request.template_context_variables,
             workflow_configurations=request.workflow_configurations,
             organization_id=user.selected_organization_id,
+            **update_kwargs,
         )
 
         # Sync agent triggers if workflow definition was updated
@@ -1046,6 +1076,7 @@ async def update_workflow(
             "workflow_configurations": workflow_configs,
             "version_number": active_def.version_number if active_def else None,
             "version_status": active_def.status if active_def else None,
+            "n8n_automation_slug": workflow.n8n_automation_slug,
         }
     except HTTPException:
         raise

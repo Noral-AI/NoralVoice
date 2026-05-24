@@ -23,6 +23,14 @@ class N8nTestEventRequest(BaseModel):
         default=NoralVoiceAutomationEvent.POST_CALL_SUMMARY_CREATED.value,
         alias="eventType",
     )
+    automation_slug: str | None = Field(
+        default=None,
+        alias="automationSlug",
+        description=(
+            "Optional per-agent namespace. When set, hits "
+            "/webhook/noralvoice/{automationSlug}/{event-slug}."
+        ),
+    )
     payload: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -60,6 +68,7 @@ async def send_n8n_test_event(
             "company_id": user.selected_organization_id,
             "account_id": user.selected_organization_id,
             "user_id": user.id,
+            "automation_slug": request_body.automation_slug,
             "request_id": payload["metadata"].get("requestId"),
         },
     )
