@@ -26,6 +26,13 @@ DEFAULT_TIMEOUT_MS = 10_000
 DEFAULT_RETRY_COUNT = 2
 TRANSIENT_STATUS_CODES = {408, 429}
 
+# Per-agent slugs must be lowercase, dash-separated path segments — enforced
+# by the DB check constraint on workflows.n8n_automation_slug and re-enforced
+# here so URL builders never construct a malformed path even if a future
+# caller bypasses DB validation.
+AUTOMATION_SLUG_PATTERN = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+MAX_AUTOMATION_SLUG_LENGTH = 64
+
 
 class N8nConfigurationError(RuntimeError):
     """Raised when n8n is enabled but required server config is missing."""
@@ -33,6 +40,32 @@ class N8nConfigurationError(RuntimeError):
 
 class UnsupportedN8nEventError(ValueError):
     """Raised when an event is not in the supported NoralVoice automation set."""
+
+
+class InvalidAutomationSlugError(ValueError):
+    """Raised when an automation slug doesn't match the required format."""
+
+
+def validate_automation_slug(slug: str | None) -> str | None:
+    """Return a normalized slug or raise. ``None`` / blank passes through."""
+    if slug is None:
+        return None
+    if not isinstance(slug, str):
+        raise InvalidAutomationSlugError(
+            f"automation slug must be a string, got {type(slug).__name__}"
+        )
+    candidate = slug.strip().lower()
+    if not candidate:
+        return None
+    if len(candidate) > MAX_AUTOMATION_SLUG_LENGTH:
+        raise InvalidAutomationSlugError(
+            f"automation slug exceeds {MAX_AUTOMATION_SLUG_LENGTH} chars"
+        )
+    if not AUTOMATION_SLUG_PATTERN.match(candidate):
+        raise InvalidAutomationSlugError(
+            "automation slug must be lowercase alphanumerics separated by single dashes"
+        )
+    return candidate
 
 
 class NoralVoiceAutomationEvent(str, Enum):
@@ -87,6 +120,7 @@ class N8nTriggerOptions:
     call_id: str | None = None
     session_id: int | str | None = None
     user_id: int | str | None = None
+    automation_slug: str | None = None
     occurred_at: datetime | None = None
     include_raw_response: bool = False
     backoff_base_seconds: float = 0.25
@@ -215,14 +249,29 @@ def resolve_event_type(
 
 
 def get_webhook_url(
-    event_type: NoralVoiceAutomationEvent | str, config: N8nConfig | None = None
+    event_type: NoralVoiceAutomationEvent | str,
+    config: N8nConfig | None = None,
+    automation_slug: str | None = None,
 ) -> str:
+    """Build the n8n webhook URL.
+
+    When ``automation_slug`` is set, the URL is namespaced by that slug:
+    ``/webhook/noralvoice/{automation_slug}/{event-slug}``. This lets each
+    NoralVoice agent route to its own dedicated n8n workflow instead of
+    every agent sharing one webhook per event type. When the slug is
+    ``None``, the legacy unnamespaced path is used so existing single-agent
+    deployments continue working without reconfiguring n8n.
+    """
     cfg = config or load_n8n_config()
     event = resolve_event_type(event_type)
     if not cfg.base_url:
         raise N8nConfigurationError("N8N_BASE_URL is required")
-    slug = quote(normalize_event_name(event.value), safe="")
-    return f"{cfg.base_url}/webhook/noralvoice/{slug}"
+    event_slug = quote(normalize_event_name(event.value), safe="")
+    normalized_namespace = validate_automation_slug(automation_slug)
+    if normalized_namespace:
+        ns = quote(normalized_namespace, safe="")
+        return f"{cfg.base_url}/webhook/noralvoice/{ns}/{event_slug}"
+    return f"{cfg.base_url}/webhook/noralvoice/{event_slug}"
 
 
 def supported_event_descriptors() -> list[dict[str, str]]:
@@ -306,6 +355,9 @@ def _metadata(
             ),
             "userId": first_value(
                 options.user_id, payload.get("userId"), payload.get("user_id")
+            ),
+            "automationSlug": first_value(
+                options.automation_slug, metadata.get("automationSlug")
             ),
             "environment": config.environment,
         }
@@ -429,13 +481,21 @@ async def trigger_n8n_workflow(
         return result
 
     opts = _coerce_options(options)
-    url = get_webhook_url(event, config)
+    try:
+        url = get_webhook_url(event, config, automation_slug=opts.automation_slug)
+    except InvalidAutomationSlugError as exc:
+        result = N8nTriggerResult(success=False, message=str(exc))
+        _record_result(result)
+        logger.warning(f"n8n trigger rejected: {exc}")
+        return result
     body = build_n8n_request_body(event, payload, opts, config)
     headers = {
         "Content-Type": "application/json",
         SECRET_HEADER_NAME: config.webhook_secret or "",
         "X-Noral-Event-Type": event.value,
     }
+    if opts.automation_slug:
+        headers["X-Noral-Automation-Slug"] = opts.automation_slug
 
     attempts = config.retry_count + 1
     timeout_seconds = config.timeout_ms / 1000

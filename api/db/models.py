@@ -377,6 +377,7 @@ class WorkflowModel(Base):
     workflow_configurations = Column(
         JSON, nullable=False, default=dict, server_default=text("'{}'::json")
     )
+    n8n_automation_slug = Column(String(64), nullable=True, index=True)
     runs = relationship("WorkflowRunModel", back_populates="workflow")
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 

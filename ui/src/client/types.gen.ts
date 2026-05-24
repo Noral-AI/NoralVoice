@@ -3983,6 +3983,10 @@ export type UpdateWorkflowRequest = {
     workflow_configurations?: {
         [key: string]: unknown;
     } | null;
+    /**
+     * N8N Automation Slug. Empty string clears, non-empty sets, omitted leaves alone.
+     */
+    n8n_automation_slug?: string | null;
 };
 
 /**
@@ -4484,6 +4488,10 @@ export type WorkflowResponse = {
      * Workflow Uuid
      */
     workflow_uuid?: string | null;
+    /**
+     * N8N Automation Slug. Per-agent namespace for n8n webhook URLs.
+     */
+    n8n_automation_slug?: string | null;
 };
 
 /**

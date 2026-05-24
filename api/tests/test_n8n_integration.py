@@ -9,12 +9,14 @@ from api.routes.n8n_integration import router
 from api.services.auth.depends import get_superuser
 from api.services.n8n_client import (
     SECRET_HEADER_NAME,
+    InvalidAutomationSlugError,
     N8nTriggerResult,
     get_n8n_status,
     get_webhook_url,
     normalize_event_name,
     resolve_event_type,
     trigger_n8n_workflow,
+    validate_automation_slug,
 )
 
 
@@ -79,6 +81,94 @@ def test_webhook_url_generation(monkeypatch):
     assert get_webhook_url("CALL_COMPLETED") == (
         "https://automation.noral.ai/webhook/noralvoice/call-completed"
     )
+
+
+def test_webhook_url_with_automation_slug(monkeypatch):
+    _enable_n8n(monkeypatch)
+
+    assert get_webhook_url("CALL_COMPLETED", automation_slug="acme-roof-inbound") == (
+        "https://automation.noral.ai/webhook/noralvoice/acme-roof-inbound/call-completed"
+    )
+
+
+def test_webhook_url_falls_back_when_slug_is_blank(monkeypatch):
+    _enable_n8n(monkeypatch)
+
+    for blank in ("", "   ", None):
+        assert get_webhook_url("CALL_COMPLETED", automation_slug=blank) == (
+            "https://automation.noral.ai/webhook/noralvoice/call-completed"
+        )
+
+
+def test_webhook_url_rejects_invalid_slug(monkeypatch):
+    _enable_n8n(monkeypatch)
+
+    # Mixed-case input is normalized (see test_validate_automation_slug_normalizes...).
+    # Structural-format violations are rejected outright.
+    for bad in (
+        "acme--roof",  # double dash
+        "-acme",  # leading dash
+        "acme-",  # trailing dash
+        "acme_roof",  # underscore
+        "acme/roof",  # slash (path injection attempt)
+        "acme roof",  # internal space (strip + lower leaves the space)
+        "a" * 65,  # too long
+    ):
+        with pytest.raises(InvalidAutomationSlugError):
+            get_webhook_url("CALL_COMPLETED", automation_slug=bad)
+
+
+def test_validate_automation_slug_normalizes_whitespace_and_case():
+    assert validate_automation_slug("  ACME-Roof-Inbound  ") == "acme-roof-inbound"
+    assert validate_automation_slug("") is None
+    assert validate_automation_slug(None) is None
+
+
+@pytest.mark.asyncio
+async def test_trigger_uses_slugged_url_and_sets_header(monkeypatch):
+    _enable_n8n(monkeypatch)
+    seen = {}
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        seen["url"] = str(request.url)
+        seen["slug_header"] = request.headers.get("X-Noral-Automation-Slug")
+        seen["secret"] = request.headers.get(SECRET_HEADER_NAME)
+        return httpx.Response(200, json={"executionId": "exec_slug"})
+
+    result = await trigger_n8n_workflow(
+        "CALL_COMPLETED",
+        {"companyId": 42, "callId": "CA123"},
+        options={"automation_slug": "acme-roof-inbound"},
+        transport=httpx.MockTransport(handler),
+    )
+
+    assert result.success is True
+    assert seen["url"] == (
+        "https://automation.noral.ai/webhook/noralvoice/acme-roof-inbound/call-completed"
+    )
+    assert seen["slug_header"] == "acme-roof-inbound"
+    assert seen["secret"] == "super-secret-value"
+
+
+@pytest.mark.asyncio
+async def test_invalid_slug_fails_closed_without_request(monkeypatch):
+    _enable_n8n(monkeypatch)
+    calls = {"count": 0}
+
+    async def handler(_request: httpx.Request) -> httpx.Response:
+        calls["count"] += 1
+        return httpx.Response(200, json={})
+
+    result = await trigger_n8n_workflow(
+        "CALL_COMPLETED",
+        {},
+        options={"automation_slug": "Bad Slug"},
+        transport=httpx.MockTransport(handler),
+    )
+
+    assert result.success is False
+    assert calls["count"] == 0  # never attempted
+    assert "lowercase" in result.message.lower() or "dash" in result.message.lower()
 
 
 @pytest.mark.asyncio

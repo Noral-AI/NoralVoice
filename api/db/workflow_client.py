@@ -9,6 +9,12 @@ from sqlalchemy.orm import load_only, selectinload
 from api.db.base_client import BaseDBClient
 from api.db.models import WorkflowDefinitionModel, WorkflowModel, WorkflowRunModel
 
+# Sentinel for update_workflow: callers omit the kwarg to leave a field
+# unchanged. Passing ``None`` or ``""`` clears the field, passing a real
+# value sets it. We need this for ``n8n_automation_slug`` because all three
+# states (leave-alone / clear / set) are meaningful.
+_UNSET_SLUG: object = object()
+
 
 class WorkflowClient(BaseDBClient):
     async def _next_version_number(self, session, workflow_id: int) -> int:
@@ -27,6 +33,7 @@ class WorkflowClient(BaseDBClient):
         workflow_definition: dict,
         user_id: int,
         organization_id: int = None,
+        n8n_automation_slug: str | None = None,
     ) -> WorkflowModel:
         async with self.async_session() as session:
             try:
@@ -35,6 +42,7 @@ class WorkflowClient(BaseDBClient):
                     workflow_definition=workflow_definition,  # Keep for backwards compatibility
                     user_id=user_id,
                     organization_id=organization_id,
+                    n8n_automation_slug=n8n_automation_slug or None,
                 )
                 session.add(new_workflow)
                 await session.flush()  # Flush to get the workflow ID
@@ -499,6 +507,7 @@ class WorkflowClient(BaseDBClient):
         workflow_configurations: dict | None,
         user_id: int = None,
         organization_id: int = None,
+        n8n_automation_slug: str | None | object = _UNSET_SLUG,
     ) -> WorkflowModel:
         """
         Update an existing workflow in the database.
@@ -542,6 +551,11 @@ class WorkflowClient(BaseDBClient):
             # Name is a workflow-level field, not versioned
             if name is not None:
                 workflow.name = name
+
+            # Slug is also workflow-level (not versioned). Sentinel: omitted
+            # leaves alone; falsy ("" / None) clears; truthy sets.
+            if n8n_automation_slug is not _UNSET_SLUG:
+                workflow.n8n_automation_slug = n8n_automation_slug or None
 
             try:
                 await session.commit()

@@ -32,6 +32,7 @@ async def trigger_n8n_automation_event(
         return
     payload = payload or {}
     organization_id = None
+    automation_slug: str | None = None
 
     if workflow_run_id is not None:
         set_current_run_id(workflow_run_id)
@@ -43,12 +44,19 @@ async def trigger_n8n_automation_event(
                 f"trigger_n8n_automation_event: run {workflow_run_id} not found"
             )
             return
+        automation_slug = getattr(
+            getattr(run, "workflow", None), "n8n_automation_slug", None
+        )
         payload = build_workflow_run_n8n_payload(
             run,
             event_type=event,
             organization_id=organization_id,
             overrides=payload,
         )
+
+    # Override-supplied slug (rare — diagnostics / test endpoint) wins over
+    # the agent's persisted slug.
+    automation_slug = payload.get("automationSlug") or automation_slug
 
     result = await trigger_n8n_workflow(
         event,
@@ -59,6 +67,7 @@ async def trigger_n8n_automation_event(
             "call_id": payload.get("callId"),
             "session_id": payload.get("sessionId") or workflow_run_id,
             "user_id": payload.get("userId"),
+            "automation_slug": automation_slug,
             "trace_id": (payload.get("metadata") or {}).get("traceId"),
             "request_id": (payload.get("metadata") or {}).get("requestId"),
         },

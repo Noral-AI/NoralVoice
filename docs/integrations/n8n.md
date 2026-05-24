@@ -26,23 +26,48 @@ If `N8N_ENABLED` is missing or false, NoralVoice skips n8n safely. If enabled wi
 
 ## Webhook URL Pattern
 
-NoralVoice sends POST requests to:
+Each NoralVoice agent (workflow) can have its own **automation slug** that namespaces its webhook URL. Set the slug per agent in `Workflow → Settings → Automations` (or via the workflow API `n8n_automation_slug` field). This lets every inbound and outbound agent route to a dedicated n8n workflow instead of every agent sharing one URL per event type.
+
+With a slug set on the agent:
 
 ```text
-{N8N_BASE_URL}/webhook/noralvoice/{event-slug}
+{N8N_BASE_URL}/webhook/noralvoice/{automation-slug}/{event-slug}
 ```
 
-Examples:
+Examples for an agent with `n8n_automation_slug = "acme-roof-inbound"`:
+
+```text
+POST /webhook/noralvoice/acme-roof-inbound/inbound-call-received
+POST /webhook/noralvoice/acme-roof-inbound/call-completed
+POST /webhook/noralvoice/acme-roof-inbound/lead-captured
+```
+
+With no slug set (fallback for simple single-agent setups):
 
 ```text
 POST /webhook/noralvoice/inbound-call-received
 POST /webhook/noralvoice/call-completed
 POST /webhook/noralvoice/lead-captured
-POST /webhook/noralvoice/appointment-booked
-POST /webhook/noralvoice/human-handoff-required
 ```
 
-Internal event names are normalized to URL-safe slugs. For example, `CALL_COMPLETED` becomes `call-completed`.
+Internal event names are normalized to URL-safe slugs (e.g. `CALL_COMPLETED` → `call-completed`). Automation slugs must match `^[a-z0-9]+(-[a-z0-9]+)*$` and are capped at 64 chars; mixed-case input is normalized to lowercase before saving.
+
+### Authoring per-agent workflows in n8n
+
+For each agent that needs automations, create the n8n workflows it cares about (you only need workflows for the events that agent emits — unregistered webhooks return 404 and are logged as warnings, not errors). The URL of each n8n webhook trigger must match `noralvoice/{your-slug}/{event-slug}` exactly.
+
+```text
+Inbound roofing agent  (slug: acme-roof-inbound)
+  ├─ noralvoice/acme-roof-inbound/inbound-call-received
+  ├─ noralvoice/acme-roof-inbound/call-completed
+  └─ noralvoice/acme-roof-inbound/lead-captured
+
+Outbound follow-up agent  (slug: acme-followup-outbound)
+  ├─ noralvoice/acme-followup-outbound/call-completed
+  └─ noralvoice/acme-followup-outbound/missed-call
+```
+
+Each agent's workflows are independent — no shared dispatch logic needed.
 
 ## n8n Webhook Header Check
 
@@ -52,7 +77,14 @@ Every n8n webhook workflow should verify this header before doing work:
 X-Noral-Webhook-Secret: <shared webhook secret>
 ```
 
-In n8n, add an IF node or Code node immediately after the Webhook trigger and compare `$headers["x-noral-webhook-secret"]` with the expected secret stored in n8n credentials or environment variables.
+In n8n, add an IF node or Code node immediately after the Webhook trigger and compare `$headers["x-noral-webhook-secret"]` with the expected secret stored in n8n credentials. (n8n has `N8N_BLOCK_ENV_ACCESS_IN_NODE=true` by default, so the secret must live in n8n Credentials — not env vars.)
+
+Two extra non-secret headers are sent and are useful for logging / debugging:
+
+```text
+X-Noral-Event-Type: CALL_COMPLETED
+X-Noral-Automation-Slug: acme-roof-inbound   # omitted when the agent has no slug
+```
 
 ## Example Payload
 
@@ -68,12 +100,14 @@ In n8n, add an IF node or Code node immediately after the Webhook trigger and co
     "accountId": 42,
     "callId": "CA123",
     "sessionId": 9001,
+    "automationSlug": "acme-roof-inbound",
     "environment": "production"
   },
   "payload": {
     "companyId": 42,
     "accountId": 42,
     "agentId": 7,
+    "automationSlug": "acme-roof-inbound",
     "workflowId": 7,
     "workflowRunId": 9001,
     "callId": "CA123",
