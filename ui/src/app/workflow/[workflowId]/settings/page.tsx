@@ -1007,11 +1007,9 @@ function VoicemailSection({
 function AutomationsSection({
     workflowId,
     initialSlug,
-    onSlugSaved,
 }: {
     workflowId: number;
     initialSlug: string | null | undefined;
-    onSlugSaved: (slug: string | null) => void;
 }) {
     const [slug, setSlug] = useState<string>(initialSlug || "");
     const [isSaving, setIsSaving] = useState(false);
@@ -1047,9 +1045,11 @@ function AutomationsSection({
                 toast.error(detail || "Failed to save automation slug.");
                 return;
             }
-            const savedSlug = isCleared ? null : normalized;
-            onSlugSaved(savedSlug);
-            setSlug(savedSlug || "");
+            const savedSlug = isCleared ? "" : normalized;
+            // Component-local state is the source of truth until next page
+            // reload. The parent's WorkflowResponse won't reflect the new
+            // slug until refresh, but the form shows the saved value.
+            setSlug(savedSlug);
             toast.success(
                 isCleared
                     ? "Automation slug cleared."
@@ -1363,11 +1363,6 @@ function WorkflowSettingsInner({
                             <AutomationsSection
                                 workflowId={workflowId}
                                 initialSlug={workflow.n8n_automation_slug}
-                                onSlugSaved={(slug) =>
-                                    setWorkflow((prev) =>
-                                        prev ? { ...prev, n8n_automation_slug: slug } : prev,
-                                    )
-                                }
                             />
 
                             {/* Recordings – moved to org-level page */}
