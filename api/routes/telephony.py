@@ -397,6 +397,7 @@ async def _create_inbound_workflow_run(
     normalized_data,
     telephony_configuration_id: int,
     from_phone_number_id: Optional[int] = None,
+    request_id: str | None = None,
 ) -> int:
     """Create workflow run for inbound call and return run ID"""
     call_id = normalized_data.call_id
@@ -432,6 +433,20 @@ async def _create_inbound_workflow_run(
 
     logger.info(
         f"Created inbound workflow run {workflow_run.id} for {provider} call {call_id}"
+    )
+    from api.services.n8n_client import NoralVoiceAutomationEvent
+    from api.services.n8n_lifecycle import enqueue_n8n_event
+
+    await enqueue_n8n_event(
+        NoralVoiceAutomationEvent.INBOUND_CALL_RECEIVED,
+        workflow_run_id=workflow_run.id,
+        payload={
+            "metadata": {
+                "requestId": request_id,
+                "rawProviderEventId": call_id,
+                "sourceProvider": provider,
+            }
+        },
     )
     return workflow_run.id
 
@@ -734,6 +749,7 @@ async def handle_inbound_run(request: Request):
             normalized_data,
             telephony_configuration_id=telephony_configuration_id,
             from_phone_number_id=phone_row.id,
+            request_id=headers.get("x-request-id") or headers.get("x-correlation-id"),
         )
 
         websocket_url = (
@@ -868,6 +884,7 @@ async def handle_inbound_telephony(
             normalized_data,
             telephony_configuration_id=workflow_context["telephony_configuration_id"],
             from_phone_number_id=workflow_context.get("from_phone_number_id"),
+            request_id=headers.get("x-request-id") or headers.get("x-correlation-id"),
         )
 
         # Generate response URLs

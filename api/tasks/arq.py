@@ -45,6 +45,7 @@ from api.tasks.campaign_tasks import (
     sync_campaign_source,
 )
 from api.tasks.knowledge_base_processing import process_knowledge_base_document
+from api.tasks.n8n import trigger_n8n_automation_event
 from api.tasks.run_integrations import run_integrations_post_workflow_run
 from api.tasks.s3_upload import (
     process_workflow_completion,
@@ -61,6 +62,7 @@ class WorkerSettings:
         process_campaign_batch,
         process_knowledge_base_document,
         fire_integration_webhooks,
+        trigger_n8n_automation_event,
     ]
     cron_jobs = []
     redis_settings = REDIS_SETTINGS

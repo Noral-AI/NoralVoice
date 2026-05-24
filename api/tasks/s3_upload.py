@@ -175,4 +175,21 @@ async def process_workflow_completion(
     except Exception as e:
         logger.error(f"Error calculating cost for workflow {workflow_run_id}: {e}")
 
+    # Step 5: Queue hidden n8n automations after artifacts and cost metadata
+    # have had a chance to settle. Delivery is fire-and-log in the ARQ task.
+    try:
+        from api.services.n8n_lifecycle import (
+            enqueue_n8n_event,
+            infer_completion_events,
+        )
+
+        workflow_run = await db_client.get_workflow_run_by_id(workflow_run_id)
+        if workflow_run:
+            for event in infer_completion_events(workflow_run):
+                await enqueue_n8n_event(event, workflow_run_id=workflow_run_id)
+    except Exception as e:
+        logger.error(
+            f"Error queueing n8n automations for workflow {workflow_run_id}: {e}"
+        )
+
     logger.info(f"Completed workflow completion processing for run {workflow_run_id}")

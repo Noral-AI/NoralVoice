@@ -209,6 +209,22 @@ async def _process_status_update(workflow_run_id: int, status: StatusCallbackReq
             state=WorkflowRunState.COMPLETED.value,
             gathered_context={"call_tags": call_tags},
         )
+
+        if status.status in {"busy", "no-answer", "canceled"}:
+            from api.services.n8n_client import NoralVoiceAutomationEvent
+            from api.services.n8n_lifecycle import enqueue_n8n_event
+
+            await enqueue_n8n_event(
+                NoralVoiceAutomationEvent.MISSED_CALL,
+                workflow_run_id=workflow_run_id,
+                payload={
+                    "callStatus": status.status,
+                    "metadata": {
+                        "rawProviderEventId": status.call_id,
+                        "requestId": status.extra.get("request_id"),
+                    },
+                },
+            )
     elif status.status in ["in-progress", "initiated", "ringing"]:
         # No-op while the call is in flight.
         pass

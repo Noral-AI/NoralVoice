@@ -6,3 +6,4 @@ class FunctionNames:
     PROCESS_CAMPAIGN_BATCH = "process_campaign_batch"
     PROCESS_KNOWLEDGE_BASE_DOCUMENT = "process_knowledge_base_document"
     FIRE_INTEGRATION_WEBHOOKS = "fire_integration_webhooks"
+    TRIGGER_N8N_AUTOMATION_EVENT = "trigger_n8n_automation_event"

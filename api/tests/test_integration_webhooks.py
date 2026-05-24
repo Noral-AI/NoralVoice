@@ -58,6 +58,8 @@ def test_create_returns_secret_once(monkeypatch):
     row.created_at = datetime.now(UTC)
     row.last_fired_at = None
     row.last_status = None
+    row.reverse_rpc_url = None
+    row.reverse_rpc_secret = None
     monkeypatch.setattr(
         "api.routes.integration_webhooks.db_client.create_integration_webhook",
         AsyncMock(return_value=row),
@@ -86,6 +88,8 @@ def test_list_omits_secret(monkeypatch):
     row.created_at = datetime.now(UTC)
     row.last_fired_at = None
     row.last_status = "ok"
+    row.reverse_rpc_url = None
+    row.reverse_rpc_secret = None
     monkeypatch.setattr(
         "api.routes.integration_webhooks.db_client.list_integration_webhooks",
         AsyncMock(return_value=[row]),
