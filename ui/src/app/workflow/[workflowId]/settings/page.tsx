@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { ArrowLeft, BookA, Brain, CalendarIcon, Clipboard, Download, ExternalLink, FileDown, Fingerprint, Loader2, Mic, Pause, PhoneOff, Play, Settings, Trash2Icon, Upload, Variable, X } from "lucide-react";
+import { ArrowLeft, BookA, CalendarIcon, Clipboard, Download, ExternalLink, FileDown, Fingerprint, Loader2, Mic, Pause, PhoneOff, Play, Settings, Trash2Icon, Upload, Variable, X } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -11,7 +11,6 @@ import { downloadWorkflowReportApiV1WorkflowWorkflowIdReportGet, getAmbientNoise
 import type { WorkflowResponse } from "@/client/types.gen";
 import { FlowEdge, FlowNode } from "@/components/flow/types";
 import { LLMConfigSelector } from "@/components/LLMConfigSelector";
-import { ServiceConfigurationForm } from "@/components/ServiceConfigurationForm";
 import SpinLoader from "@/components/SpinLoader";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -71,9 +70,12 @@ VOICEMAIL SYSTEM (respond "VOICEMAIL"):
 Respond with ONLY "CONVERSATION" if a person answered, or "VOICEMAIL" if it's voicemail/recording.`;
 
 // Sidebar navigation items
+// NOTE: "Model Overrides" intentionally removed — LLM/voice/STT/TTS stack is
+// configured in one place: /settings?tab=models. Per-workflow override remains
+// possible only via direct API (workflow_configurations.model_overrides), not
+// surfaced here.
 const NAV_ITEMS = [
     { id: "general", label: "General", icon: Settings },
-    { id: "models", label: "Model Overrides", icon: Brain },
     { id: "variables", label: "Template Variables", icon: Variable },
     { id: "dictionary", label: "Dictionary", icon: BookA },
     { id: "voicemail", label: "Voicemail Detection", icon: PhoneOff },
@@ -1215,37 +1217,8 @@ function WorkflowSettingsInner({
                                 onSave={saveWorkflowConfigurations}
                             />
 
-                            {/* Model Overrides */}
-                            <Card id="models">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2 text-base">
-                                        <Brain className="h-4 w-4" />
-                                        Model Overrides
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Override global model settings for this workflow. Toggle individual services to
-                                        customize.{" "}
-                                        <a href={SETTINGS_DOCUMENTATION_URLS.modelOverrides} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 underline">Learn more <ExternalLink className="h-3 w-3" /></a>
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <ServiceConfigurationForm
-                                        mode="override"
-                                        currentOverrides={workflowConfigurations.model_overrides}
-                                        submitLabel="Save Model Overrides"
-                                        onSave={async (config) => {
-                                            await saveWorkflowConfigurations(
-                                                {
-                                                    ...workflowConfigurations,
-                                                    model_overrides:
-                                                        config.model_overrides as WorkflowConfigurations["model_overrides"],
-                                                } as WorkflowConfigurations,
-                                                workflowName,
-                                            );
-                                        }}
-                                    />
-                                </CardContent>
-                            </Card>
+                            {/* Model Overrides — intentionally removed from this page. */}
+                            {/* Stack config (LLM / Voice / STT / TTS) is a single global setting at /settings?tab=models. */}
 
                             {/* Template Variables */}
                             <TemplateVariablesSection
