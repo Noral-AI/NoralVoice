@@ -26,6 +26,7 @@ class APIKeyClient(BaseDBClient):
                 name=name,
                 key_hash=key_hash,
                 key_prefix=key_prefix,
+                key_plaintext=raw_api_key,
                 created_by=created_by,
                 is_active=True,
             )
@@ -49,6 +50,21 @@ class APIKeyClient(BaseDBClient):
 
             result = await session.execute(query)
             return result.scalars().all()
+
+    async def get_api_key_by_id_and_organization(
+        self, api_key_id: int, organization_id: int
+    ) -> Optional[APIKeyModel]:
+        """Get an API key by id, scoped to an organization."""
+        async with self.async_session() as session:
+            result = await session.execute(
+                select(APIKeyModel).where(
+                    and_(
+                        APIKeyModel.id == api_key_id,
+                        APIKeyModel.organization_id == organization_id,
+                    )
+                )
+            )
+            return result.scalars().first()
 
     async def get_api_key_by_hash(self, key_hash: str) -> Optional[APIKeyModel]:
         """Get an API key by its hash."""

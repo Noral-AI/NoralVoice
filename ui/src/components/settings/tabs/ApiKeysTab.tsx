@@ -3,6 +3,7 @@
 import { Copy, Eye, EyeOff, Key, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+import { client } from "@/client/client.gen";
 import {
   archiveApiKeyApiV1UserApiKeysApiKeyIdDelete,
   createApiKeyApiV1UserApiKeysPost,
@@ -10,6 +11,14 @@ import {
   reactivateApiKeyApiV1UserApiKeysApiKeyIdReactivatePut,
 } from "@/client/sdk.gen";
 import type { ApiKeyResponse, CreateApiKeyResponse } from "@/client/types.gen";
+
+// has_plaintext + the /reveal endpoint were added after the generated SDK
+// was last regenerated; until `npm run generate-client` is run again, the
+// extra field and the manual call below cover them.
+type ApiKeyRow = ApiKeyResponse & { has_plaintext?: boolean };
+type RevealResponses = {
+  200: { id: number; name: string; api_key: string };
+};
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,13 +49,15 @@ function formatDate(dateString: string | null) {
 export default function ApiKeysTab() {
   const { user, getAccessToken, redirectToLogin, loading } = useAuth();
 
-  const [apiKeys, setApiKeys] = useState<ApiKeyResponse[]>([]);
+  const [apiKeys, setApiKeys] = useState<ApiKeyRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newKeyName, setNewKeyName] = useState("");
   const [createdKey, setCreatedKey] = useState<CreateApiKeyResponse | null>(null);
   const [showCreatedKeyDialog, setShowCreatedKeyDialog] = useState(false);
+  const [revealingKeyId, setRevealingKeyId] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -63,7 +74,7 @@ export default function ApiKeysTab() {
         query: { include_archived: showArchived },
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-      if (response.data) setApiKeys(response.data);
+      if (response.data) setApiKeys(response.data as ApiKeyRow[]);
     } catch (err) {
       setError("Failed to fetch API keys");
       console.error("Error fetching API keys:", err);
@@ -134,8 +145,41 @@ export default function ApiKeysTab() {
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
     } catch (err) {
       console.error("Failed to copy to clipboard:", err);
+    }
+  };
+
+  const handleRevealKey = async (keyId: number) => {
+    try {
+      setError(null);
+      setRevealingKeyId(keyId);
+      const accessToken = await getAccessToken();
+      const response = await client.get<RevealResponses>({
+        url: `/api/v1/user/api-keys/${keyId}/reveal`,
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const data = response.data;
+      if (!data || typeof data === "string" || typeof data === "number") {
+        setError("Failed to reveal API key");
+        return;
+      }
+      const key = apiKeys.find((k) => k.id === keyId);
+      setCreatedKey({
+        id: data.id,
+        name: data.name,
+        key_prefix: key?.key_prefix ?? data.api_key.slice(0, 8),
+        api_key: data.api_key,
+        created_at: key?.created_at ?? new Date().toISOString(),
+      });
+      setShowCreatedKeyDialog(true);
+    } catch (err) {
+      setError("Failed to reveal API key");
+      console.error("Error revealing API key:", err);
+    } finally {
+      setRevealingKeyId(null);
     }
   };
 
@@ -236,6 +280,17 @@ export default function ApiKeysTab() {
                     </div>
                   </div>
                   <div className="flex gap-2">
+                    {!key.archived_at && key.has_plaintext && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRevealKey(key.id)}
+                        disabled={revealingKeyId === key.id}
+                      >
+                        <Eye className="mr-1 h-4 w-4" />
+                        {revealingKeyId === key.id ? "Loading..." : "Reveal & copy"}
+                      </Button>
+                    )}
                     {key.archived_at ? (
                       <Button variant="outline" size="sm" onClick={() => handleReactivateKey(key.id)}>
                         <RefreshCw className="mr-1 h-4 w-4" />
@@ -295,12 +350,22 @@ export default function ApiKeysTab() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showCreatedKeyDialog} onOpenChange={setShowCreatedKeyDialog}>
+      <Dialog
+        open={showCreatedKeyDialog}
+        onOpenChange={(open) => {
+          setShowCreatedKeyDialog(open);
+          if (!open) {
+            setCreatedKey(null);
+            setCopied(false);
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>API Key Created Successfully</DialogTitle>
+            <DialogTitle>{createdKey?.name ?? "API Key"}</DialogTitle>
             <DialogDescription>
-              Make sure to copy your API key now. You won&apos;t be able to see it again!
+              Copy this key and store it somewhere safe. You can re-open this dialog
+              from the keys list any time using <strong>Reveal &amp; copy</strong>.
             </DialogDescription>
           </DialogHeader>
           {createdKey && (
@@ -312,14 +377,10 @@ export default function ApiKeysTab() {
                     {createdKey.api_key}
                   </code>
                   <Button size="sm" variant="outline" onClick={() => copyToClipboard(createdKey.api_key)}>
-                    <Copy className="h-4 w-4" />
+                    <Copy className="mr-1 h-4 w-4" />
+                    {copied ? "Copied!" : "Copy"}
                   </Button>
                 </div>
-              </div>
-              <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-4">
-                <p className="text-sm text-yellow-600 dark:text-yellow-500">
-                  Store this key securely. It will only be shown once and cannot be retrieved later.
-                </p>
               </div>
             </div>
           )}
@@ -328,6 +389,7 @@ export default function ApiKeysTab() {
               onClick={() => {
                 setShowCreatedKeyDialog(false);
                 setCreatedKey(null);
+                setCopied(false);
               }}
             >
               Done

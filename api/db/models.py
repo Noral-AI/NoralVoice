@@ -133,6 +133,11 @@ class APIKeyModel(Base):
     name = Column(String, nullable=False)
     key_hash = Column(String, nullable=False, unique=True, index=True)
     key_prefix = Column(String, nullable=False)  # Store first 8 chars for display
+    # Plaintext copy of the issued key, kept so the UI can let an org admin
+    # re-copy it after the post-creation dialog is dismissed. NULL for keys
+    # issued before this column existed — they remain valid for auth but
+    # can never be re-revealed.
+    key_plaintext = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     # When true, this key is allowed to assert a delegated identity via the

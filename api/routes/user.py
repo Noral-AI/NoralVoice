@@ -198,6 +198,15 @@ class APIKeyResponse(BaseModel):
     created_at: datetime
     last_used_at: Optional[datetime] = None
     archived_at: Optional[datetime] = None
+    # True when the plaintext key is stored and can be revealed via the
+    # /reveal endpoint. False for keys issued before that column existed.
+    has_plaintext: bool = False
+
+
+class RevealAPIKeyResponse(BaseModel):
+    id: int
+    name: str
+    api_key: str
 
 
 class CreateAPIKeyRequest(BaseModel):
@@ -234,6 +243,7 @@ async def get_api_keys(
             created_at=key.created_at,
             last_used_at=key.last_used_at,
             archived_at=key.archived_at,
+            has_plaintext=key.key_plaintext is not None,
         )
         for key in api_keys
     ]
@@ -260,6 +270,38 @@ async def create_api_key(
         key_prefix=api_key.key_prefix,
         api_key=raw_key,
         created_at=api_key.created_at,
+    )
+
+
+@router.get("/api-keys/{api_key_id}/reveal")
+async def reveal_api_key(
+    api_key_id: int,
+    user: UserModel = Depends(get_user),
+) -> RevealAPIKeyResponse:
+    """Return the plaintext API key for re-copy.
+
+    Org-scoped — returns 404 if the key belongs to a different org. Returns
+    410 Gone if the key was issued before plaintext was persisted (it stays
+    valid for auth but cannot be re-revealed).
+    """
+    if not user.selected_organization_id:
+        raise HTTPException(status_code=400, detail="No organization selected")
+
+    api_key = await db_client.get_api_key_by_id_and_organization(
+        api_key_id, user.selected_organization_id
+    )
+    if api_key is None:
+        raise HTTPException(status_code=404, detail="API key not found")
+    if api_key.key_plaintext is None:
+        raise HTTPException(
+            status_code=410,
+            detail="This key was issued before plaintext was stored and cannot be re-revealed.",
+        )
+
+    return RevealAPIKeyResponse(
+        id=api_key.id,
+        name=api_key.name,
+        api_key=api_key.key_plaintext,
     )
 
 
