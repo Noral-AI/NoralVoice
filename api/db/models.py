@@ -135,6 +135,12 @@ class APIKeyModel(Base):
     key_prefix = Column(String, nullable=False)  # Store first 8 chars for display
     is_active = Column(Boolean, default=True, nullable=False)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    # When true, this key is allowed to assert a delegated identity via the
+    # X-Noralos-Actor-User-* request headers. Auth resolves current_user
+    # via JIT provisioning (provider_id="noralos:<userId>") instead of
+    # returning api_key.created_by. Set on service keys only, never on
+    # personal API keys. See docs/design/noralos-delegated-identity.md.
+    delegation_capable = Column(Boolean, nullable=False, server_default="false")
     last_used_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     archived_at = Column(DateTime(timezone=True), nullable=True)

@@ -21,12 +21,22 @@ async def get_user(
     authorization: Annotated[str | None, Header()] = None,
     x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
     cookie: Annotated[str | None, Header()] = None,
+    x_noralos_actor_user_id: Annotated[
+        str | None, Header(alias="X-Noralos-Actor-User-Id")
+    ] = None,
+    x_noralos_actor_user_email: Annotated[
+        str | None, Header(alias="X-Noralos-Actor-User-Email")
+    ] = None,
 ) -> UserModel:
     # ------------------------------------------------------------------
     # Check if API key is provided (takes precedence)
     # ------------------------------------------------------------------
     if x_api_key:
-        return await _handle_api_key_auth(x_api_key)
+        return await _handle_api_key_auth(
+            x_api_key,
+            actor_user_id=x_noralos_actor_user_id,
+            actor_user_email=x_noralos_actor_user_email,
+        )
 
     # ------------------------------------------------------------------
     # Cross-product SSO: when AUTH_PROVIDER=noral, forward the inbound
@@ -147,13 +157,26 @@ async def get_user(
 async def get_user_optional(
     authorization: Annotated[str | None, Header()] = None,
     x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
+    cookie: Annotated[str | None, Header()] = None,
+    x_noralos_actor_user_id: Annotated[
+        str | None, Header(alias="X-Noralos-Actor-User-Id")
+    ] = None,
+    x_noralos_actor_user_email: Annotated[
+        str | None, Header(alias="X-Noralos-Actor-User-Email")
+    ] = None,
 ) -> UserModel | None:
     """
     Same as get_user but returns None instead of raising 401 if unauthorized.
     Useful for endpoints that need to work both with and without auth.
     """
     try:
-        return await get_user(authorization, x_api_key)
+        return await get_user(
+            authorization,
+            x_api_key,
+            cookie,
+            x_noralos_actor_user_id,
+            x_noralos_actor_user_email,
+        )
     except HTTPException as e:
         if e.status_code == 401:
             return None
@@ -190,27 +213,83 @@ async def _handle_oss_auth(authorization: str | None) -> UserModel:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
-async def _handle_api_key_auth(api_key: str) -> UserModel:
+async def _handle_api_key_auth(
+    api_key: str,
+    actor_user_id: str | None = None,
+    actor_user_email: str | None = None,
+) -> UserModel:
     """
     Handle authentication via X-API-Key header.
-    Returns the user who created the API key with the correct organization context.
+
+    Default behavior: returns the user who created the API key with the
+    correct organization context (legacy + non-delegation keys).
+
+    Delegated identity: if the key is flagged ``delegation_capable=True``
+    and the request carries ``X-Noralos-Actor-User-Id`` (forwarded by the
+    NoralOS plugin from a server-resolved wakeup-chain lookup), resolve
+    ``current_user`` by JIT-provisioning a user with
+    ``provider_id="noralos:<actor_user_id>"``. This is the same path the
+    browser SSO flow uses (``api/services/auth/noral_sso.py``), so the
+    same human ends up on the same row regardless of which surface they
+    came through. See ``docs/design/noralos-delegated-identity.md``.
+
+    The actor headers are ignored unless the key is delegation-capable —
+    a non-delegation key carrying actor headers behaves identically to a
+    bare key. This prevents privilege escalation from a leaked personal
+    API key.
     """
-    # Validate the API key
     api_key_model = await db_client.validate_api_key(api_key)
 
     if not api_key_model:
         raise HTTPException(status_code=401, detail="Invalid or expired API key")
 
-    # API key must have a created_by user
+    # ------------------------------------------------------------------
+    # Delegated identity path: trust NoralOS-asserted user via the
+    # existing JIT-provisioning helper. Only honored on flagged keys.
+    # ------------------------------------------------------------------
+    if api_key_model.delegation_capable and actor_user_id:
+        provider_id = f"noralos:{actor_user_id}"
+        try:
+            user, was_created = await db_client.get_or_create_user_by_provider_id(
+                provider_id
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error resolving delegated identity: {e}",
+            )
+
+        # Sync email at first sight only — never overwrite a user's existing
+        # email since the same user_id might be reached via multiple flows
+        # and the email of record should remain stable.
+        if was_created and actor_user_email and user.email != actor_user_email:
+            try:
+                await db_client.update_user_email(user.id, actor_user_email)
+                user.email = actor_user_email
+            except Exception:
+                # Non-fatal — JIT user is created, email sync can retry later.
+                logger.warning(
+                    f"Failed to sync email on JIT user {user.id} for delegated identity"
+                )
+
+        user.selected_organization_id = api_key_model.organization_id
+        logger.debug(
+            f"Authenticated via delegated identity: provider_id={provider_id} "
+            f"(api_key={api_key_model.key_prefix}..., org_id={api_key_model.organization_id}, "
+            f"jit_created={was_created})"
+        )
+        return user
+
+    # ------------------------------------------------------------------
+    # Legacy / non-delegation path: ownership = api_key.created_by.
+    # ------------------------------------------------------------------
     if not api_key_model.created_by:
         raise HTTPException(status_code=401, detail="API key has no associated user")
 
-    # Get the user who created this API key
     user = await db_client.get_user_by_id(api_key_model.created_by)
     if not user:
         raise HTTPException(status_code=401, detail="API key owner not found")
 
-    # Set the organization context to the API key's organization
     user.selected_organization_id = api_key_model.organization_id
 
     logger.debug(
