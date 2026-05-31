@@ -380,6 +380,7 @@ class WorkflowClient(BaseDBClient):
                     WorkflowModel.name,
                     WorkflowModel.status,
                     WorkflowModel.created_at,
+                    WorkflowModel.workflow_uuid,
                 )
             )
 
