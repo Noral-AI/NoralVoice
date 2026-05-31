@@ -14,6 +14,7 @@ from api.constants import DEPLOYMENT_MODE
 from api.db import db_client
 from api.db.agent_trigger_client import TriggerPathConflictError
 from api.db.models import UserModel
+from api.db.workflow_client import WorkflowInUseError
 from api.db.workflow_template_client import WorkflowTemplateClient
 from api.enums import CallType, PostHogEvent, StorageBackend
 from api.schemas.workflow import WorkflowRunResponseSchema
@@ -1084,6 +1085,43 @@ async def update_workflow(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/{workflow_id}")
+async def delete_workflow_endpoint(
+    workflow_id: int,
+    user: UserModel = Depends(get_user),
+):
+    """Permanently delete a workflow.
+
+    Only workflows with no call runs, inbound phone number, campaign, or
+    LoopTalk session can be hard-deleted; anything still in use returns 409
+    and should be archived via PUT /{id}/status instead. The workflow's
+    versions are removed with it; triggers, recordings and embed tokens
+    cascade at the database level.
+    """
+    try:
+        deleted = await db_client.delete_workflow(
+            workflow_id, organization_id=user.selected_organization_id
+        )
+    except WorkflowInUseError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+    if not deleted:
+        raise HTTPException(
+            status_code=404, detail=f"Workflow with id {workflow_id} not found"
+        )
+
+    capture_event(
+        distinct_id=str(user.provider_id),
+        event=PostHogEvent.WORKFLOW_DELETED,
+        properties={
+            "workflow_id": workflow_id,
+            "organization_id": user.selected_organization_id,
+        },
+    )
+
+    return {"message": "Workflow deleted"}
 
 
 @router.post("/{workflow_id}/duplicate")
