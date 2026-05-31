@@ -149,6 +149,7 @@ class PostHogEvent(str, Enum):
     WORKFLOW_CREATED = "workflow_created"
     WORKFLOW_PUBLISHED = "workflow_published"
     WORKFLOW_DUPLICATED = "workflow_duplicated"
+    WORKFLOW_DELETED = "workflow_deleted"
     CALL_STARTED = "call_started"
     CALL_COMPLETED = "call_completed"
     CALL_FAILED = "call_failed"

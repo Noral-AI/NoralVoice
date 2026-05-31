@@ -5944,6 +5944,48 @@ export type UpdateWorkflowStatusApiV1WorkflowWorkflowIdStatusPutResponses = {
 
 export type UpdateWorkflowStatusApiV1WorkflowWorkflowIdStatusPutResponse = UpdateWorkflowStatusApiV1WorkflowWorkflowIdStatusPutResponses[keyof UpdateWorkflowStatusApiV1WorkflowWorkflowIdStatusPutResponses];
 
+export type DeleteWorkflowEndpointApiV1WorkflowWorkflowIdDeleteData = {
+    body?: never;
+    headers?: {
+        /**
+         * Authorization
+         */
+        authorization?: string | null;
+        /**
+         * X-Api-Key
+         */
+        'X-API-Key'?: string | null;
+    };
+    path: {
+        /**
+         * Workflow Id
+         */
+        workflow_id: number;
+    };
+    query?: never;
+    url: '/api/v1/workflow/{workflow_id}';
+};
+
+export type DeleteWorkflowEndpointApiV1WorkflowWorkflowIdDeleteErrors = {
+    /**
+     * Not found
+     */
+    404: unknown;
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DeleteWorkflowEndpointApiV1WorkflowWorkflowIdDeleteError = DeleteWorkflowEndpointApiV1WorkflowWorkflowIdDeleteErrors[keyof DeleteWorkflowEndpointApiV1WorkflowWorkflowIdDeleteErrors];
+
+export type DeleteWorkflowEndpointApiV1WorkflowWorkflowIdDeleteResponses = {
+    /**
+     * Successful Response
+     */
+    200: unknown;
+};
+
 export type UpdateWorkflowApiV1WorkflowWorkflowIdPutData = {
     body: UpdateWorkflowRequest;
     headers?: {

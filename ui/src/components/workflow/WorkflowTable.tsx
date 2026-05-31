@@ -1,11 +1,24 @@
 'use client';
 
-import { Archive, Pencil, RotateCcw } from 'lucide-react';
+import { Archive, Pencil, RotateCcw, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 
-import { updateWorkflowStatusApiV1WorkflowWorkflowIdStatusPut } from '@/client/sdk.gen';
+import {
+    deleteWorkflowEndpointApiV1WorkflowWorkflowIdDelete,
+    updateWorkflowStatusApiV1WorkflowWorkflowIdStatusPut,
+} from '@/client/sdk.gen';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import {
     Table,
@@ -32,6 +45,8 @@ export function WorkflowTable({ workflows, showArchived }: WorkflowTableProps) {
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
     const [loadingWorkflowId, setLoadingWorkflowId] = useState<number | null>(null);
+    const [workflowToDelete, setWorkflowToDelete] = useState<Workflow | null>(null);
+    const [deletingWorkflowId, setDeletingWorkflowId] = useState<number | null>(null);
 
     const handleEdit = (id: number) => {
         router.push(`/workflow/${id}`);
@@ -67,7 +82,41 @@ export function WorkflowTable({ workflows, showArchived }: WorkflowTableProps) {
         }
     };
 
+    const handleDelete = async (workflow: Workflow) => {
+        setDeletingWorkflowId(workflow.id);
+
+        try {
+            const { error, response } = await deleteWorkflowEndpointApiV1WorkflowWorkflowIdDelete({
+                path: {
+                    workflow_id: workflow.id,
+                },
+            });
+
+            if (response.ok) {
+                toast.success('Agent deleted');
+                setWorkflowToDelete(null);
+                startTransition(() => {
+                    router.refresh();
+                });
+                return;
+            }
+
+            // Surface the backend's reason — a 409 explains what's keeping the
+            // agent alive (call history, attached number, campaign, LoopTalk).
+            const detail = (error as { detail?: unknown } | undefined)?.detail;
+            toast.error(
+                typeof detail === 'string' ? detail : 'Failed to delete agent',
+            );
+        } catch (err) {
+            console.error('Error deleting workflow:', err);
+            toast.error('Failed to delete agent');
+        } finally {
+            setDeletingWorkflowId(null);
+        }
+    };
+
     return (
+        <>
         <div className="bg-card border rounded-lg overflow-hidden shadow-sm">
             <Table>
                 <TableHeader>
@@ -142,6 +191,20 @@ export function WorkflowTable({ workflows, showArchived }: WorkflowTableProps) {
                                             </>
                                         )}
                                     </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setWorkflowToDelete(workflow)}
+                                        disabled={
+                                            loadingWorkflowId === workflow.id ||
+                                            deletingWorkflowId === workflow.id ||
+                                            isPending
+                                        }
+                                        className="flex items-center gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                    >
+                                        <Trash2 size={16} />
+                                        Delete
+                                    </Button>
                                 </div>
                             </TableCell>
                         </TableRow>
@@ -149,5 +212,47 @@ export function WorkflowTable({ workflows, showArchived }: WorkflowTableProps) {
                 </TableBody>
             </Table>
         </div>
+
+        <AlertDialog
+            open={workflowToDelete !== null}
+            onOpenChange={(open) => {
+                if (!open && deletingWorkflowId === null) {
+                    setWorkflowToDelete(null);
+                }
+            }}
+        >
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this agent?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This permanently deletes{' '}
+                        <span className="font-medium text-foreground">
+                            {workflowToDelete?.name}
+                        </span>{' '}
+                        and all of its versions. This can&apos;t be undone. Agents
+                        with call history or an attached phone number can&apos;t be
+                        deleted — archive them instead.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel disabled={deletingWorkflowId !== null}>
+                        Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                        onClick={(e) => {
+                            e.preventDefault();
+                            if (workflowToDelete) {
+                                handleDelete(workflowToDelete);
+                            }
+                        }}
+                        disabled={deletingWorkflowId !== null}
+                        className="bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive"
+                    >
+                        {deletingWorkflowId !== null ? 'Deleting...' : 'Delete'}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+        </>
     );
 }

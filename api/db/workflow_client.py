@@ -2,12 +2,24 @@ from datetime import UTC, datetime
 from typing import Optional
 
 from loguru import logger
-from sqlalchemy import func, update
+from sqlalchemy import delete, func, or_, update
 from sqlalchemy.future import select
 from sqlalchemy.orm import load_only, selectinload
 
 from api.db.base_client import BaseDBClient
-from api.db.models import WorkflowDefinitionModel, WorkflowModel, WorkflowRunModel
+from api.db.models import (
+    CampaignModel,
+    LoopTalkTestSession,
+    TelephonyPhoneNumberModel,
+    WorkflowDefinitionModel,
+    WorkflowModel,
+    WorkflowRunModel,
+)
+
+
+class WorkflowInUseError(Exception):
+    """Raised when deleting a workflow that is still referenced by runs,
+    a phone number, a campaign, or a LoopTalk test session."""
 
 # Sentinel for update_workflow: callers omit the kwarg to leave a field
 # unchanged. Passing ``None`` or ``""`` clears the field, passing a real
@@ -668,6 +680,106 @@ class WorkflowClient(BaseDBClient):
                 raise e
             await session.refresh(workflow)
         return workflow
+
+    async def delete_workflow(
+        self,
+        workflow_id: int,
+        organization_id: Optional[int] = None,
+    ) -> bool:
+        """Permanently delete a workflow that is not in use.
+
+        Refuses (raises WorkflowInUseError) when the workflow still has call
+        runs, an attached inbound phone number, a campaign, or a LoopTalk test
+        session. None of those foreign keys cascade, and each represents live
+        routing or historical data the caller should archive rather than
+        destroy. When the delete proceeds, the workflow's versions
+        (workflow_definitions) are removed explicitly; agent_triggers,
+        workflow_recordings and embed_tokens fall away via their ON DELETE
+        CASCADE constraints.
+
+        Returns False when the workflow does not exist in the given org (so the
+        caller can answer 404), True once deleted.
+        """
+        async with self.async_session() as session:
+            query = select(WorkflowModel).where(WorkflowModel.id == workflow_id)
+            if organization_id:
+                query = query.where(WorkflowModel.organization_id == organization_id)
+            workflow = (await session.execute(query)).scalars().first()
+            if not workflow:
+                return False
+
+            run_count = (
+                await session.execute(
+                    select(func.count(WorkflowRunModel.id)).where(
+                        WorkflowRunModel.workflow_id == workflow_id
+                    )
+                )
+            ).scalar() or 0
+            if run_count:
+                raise WorkflowInUseError(
+                    f"This agent has {run_count} call run(s) on record. "
+                    "Archive it instead to keep that history."
+                )
+
+            phone_ref = (
+                await session.execute(
+                    select(TelephonyPhoneNumberModel.id)
+                    .where(TelephonyPhoneNumberModel.inbound_workflow_id == workflow_id)
+                    .limit(1)
+                )
+            ).first()
+            if phone_ref:
+                raise WorkflowInUseError(
+                    "This agent is attached to a phone number for inbound calls. "
+                    "Detach the number before deleting it."
+                )
+
+            campaign_ref = (
+                await session.execute(
+                    select(CampaignModel.id)
+                    .where(CampaignModel.workflow_id == workflow_id)
+                    .limit(1)
+                )
+            ).first()
+            if campaign_ref:
+                raise WorkflowInUseError(
+                    "This agent is used by one or more campaigns. "
+                    "Remove it from those campaigns before deleting it."
+                )
+
+            looptalk_ref = (
+                await session.execute(
+                    select(LoopTalkTestSession.id)
+                    .where(
+                        or_(
+                            LoopTalkTestSession.actor_workflow_id == workflow_id,
+                            LoopTalkTestSession.adversary_workflow_id == workflow_id,
+                        )
+                    )
+                    .limit(1)
+                )
+            ).first()
+            if looptalk_ref:
+                raise WorkflowInUseError(
+                    "This agent is referenced by a LoopTalk test session. "
+                    "Delete those sessions before deleting it."
+                )
+
+            # Break the workflows <-> workflow_definitions circular FK
+            # (released_definition_id) before removing the versions, then
+            # delete the workflow row itself.
+            workflow.released_definition_id = None
+            await session.flush()
+            await session.execute(
+                delete(WorkflowDefinitionModel).where(
+                    WorkflowDefinitionModel.workflow_id == workflow_id
+                )
+            )
+            await session.execute(
+                delete(WorkflowModel).where(WorkflowModel.id == workflow_id)
+            )
+            await session.commit()
+            return True
 
     async def get_workflow_run_count(self, workflow_id: int) -> int:
         """Get the count of runs for a workflow."""
