@@ -290,6 +290,7 @@ class WorkflowListResponse(BaseModel):
     status: str
     created_at: datetime
     total_runs: int
+    workflow_uuid: str | None = None
 
 
 class WorkflowCountResponse(BaseModel):
@@ -502,6 +503,7 @@ async def create_workflow(
         "template_context_variables": workflow.template_context_variables,
         "call_disposition_codes": workflow.call_disposition_codes,
         "workflow_configurations": workflow.workflow_configurations,
+        "workflow_uuid": workflow.workflow_uuid,
         "n8n_automation_slug": workflow.n8n_automation_slug,
     }
 
@@ -690,6 +692,7 @@ async def get_workflows(
             name=workflow.name,
             status=workflow.status,
             created_at=workflow.created_at,
+            workflow_uuid=workflow.workflow_uuid,
             total_runs=run_counts.get(workflow.id, 0),
         )
         for workflow in workflows
