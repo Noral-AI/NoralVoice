@@ -236,6 +236,13 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
     elif user_config.tts.provider == ServiceProviders.OPENAI.value:
         return OpenAITTSService(
             api_key=user_config.tts.api_key,
+            # OpenAI's TTS API only ever returns 24kHz PCM and the service does
+            # not resample. Pin the service to 24kHz so it tags frames with their
+            # true rate; otherwise it labels 24kHz audio with the pipeline rate
+            # (e.g. 16kHz on WebRTC) and the transport resamples from the wrong
+            # source rate, playing the voice too slow. With the true rate set,
+            # the output transport resamples correctly.
+            sample_rate=24000,
             settings=OpenAITTSSettings(model=user_config.tts.model),
             text_filters=[xml_function_tag_filter],
             skip_aggregator_types=["recording_router", "recording"],
@@ -260,9 +267,9 @@ def create_tts_service(user_config, audio_config: "AudioConfig"):
             settings=ElevenLabsTTSSettings(
                 voice=voice_id,
                 model=user_config.tts.model,
-                stability=0.8,
+                stability=user_config.tts.stability,
                 speed=user_config.tts.speed,
-                similarity_boost=0.75,
+                similarity_boost=user_config.tts.similarity_boost,
             ),
             text_filters=[xml_function_tag_filter],
             skip_aggregator_types=["recording_router", "recording"],

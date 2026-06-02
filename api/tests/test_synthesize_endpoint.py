@@ -499,17 +499,31 @@ def test_synthesize_allows_clean_text_through_exfil_scan(client: TestClient):
 # ---------------------------------------------------------------------------
 
 
-def test_provider_native_content_type_mp3_providers():
+def test_provider_native_content_type_elevenlabs_openai_are_pcm():
+    # Regression guard: the wired ElevenLabs (WS) and OpenAI services stream raw
+    # PCM via TTSAudioRawFrame, so synthesize() must WAV-wrap them. They were
+    # previously misclassified as MP3, which shipped raw PCM mislabeled
+    # audio/mpeg — unplayable (or wrong-rate) in the browser.
     from api.services.pipecat.tts_one_shot import _provider_native_content_type
 
-    assert _provider_native_content_type("elevenlabs") == "audio/mpeg"
-    assert _provider_native_content_type("openai") == "audio/mpeg"
+    assert _provider_native_content_type("elevenlabs") == "audio/wav"
+    assert _provider_native_content_type("openai") == "audio/wav"
 
 
 def test_provider_native_content_type_pcm_providers():
     from api.services.pipecat.tts_one_shot import _provider_native_content_type
 
-    for provider in ("cartesia", "deepgram", "sarvam", "rime", "dograh", "speaches", "camb"):
+    for provider in (
+        "elevenlabs",
+        "openai",
+        "cartesia",
+        "deepgram",
+        "sarvam",
+        "rime",
+        "dograh",
+        "speaches",
+        "camb",
+    ):
         assert _provider_native_content_type(provider) == "audio/wav", provider
 
 

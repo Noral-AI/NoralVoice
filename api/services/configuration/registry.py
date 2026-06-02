@@ -480,16 +480,55 @@ class DeepgramTTSConfiguration(BaseServiceConfiguration):
             return "aura-2"
 
 
-ELEVENLABS_TTS_MODELS = ["eleven_flash_v2_5"]
+# Models offered for ElevenLabs TTS, ordered best-default-first. All three
+# stream over the WebSocket endpoint used for live calls:
+#   - eleven_turbo_v2_5      balanced quality/latency; the right default for
+#                            real-time agents and much closer to the ElevenLabs
+#                            portal rendering than Flash.
+#   - eleven_flash_v2_5      lowest latency (~75ms) but the most "clipped",
+#                            rushed-sounding model.
+#   - eleven_multilingual_v2 highest quality / closest to the portal preview, at
+#                            higher latency — pick when quality matters more than
+#                            time-to-first-byte.
+ELEVENLABS_TTS_MODELS = [
+    "eleven_turbo_v2_5",
+    "eleven_flash_v2_5",
+    "eleven_multilingual_v2",
+]
 
 
 @register_tts
 class ElevenlabsTTSConfiguration(BaseServiceConfiguration):
     provider: Literal[ServiceProviders.ELEVENLABS] = ServiceProviders.ELEVENLABS
     voice: str = "21m00Tcm4TlvDq8ikWAM"  # Rachel voice ID
-    speed: float = Field(default=1.0, ge=0.1, le=2.0, description="Speed of the voice")
+    # ElevenLabs only honors speed in [0.7, 1.2]; values outside are ignored or
+    # clamped by the API. Constrain the schema to that range (this also drives
+    # the UI slider bounds) and coerce legacy/out-of-range values in the
+    # validator below so existing configs keep loading. A value above ~1.2 is
+    # exactly the "voice sounds sped up" symptom.
+    speed: float = Field(
+        default=1.0,
+        ge=0.7,
+        le=1.2,
+        description="Speed of the voice (ElevenLabs supports 0.7-1.2).",
+    )
+    # Voice-character settings. Defaults match the values that were previously
+    # hard-coded in service_factory, so existing voices sound identical; lower
+    # `stability` (~0.5) for a more expressive, portal-like delivery.
+    stability: float = Field(
+        default=0.8,
+        ge=0.0,
+        le=1.0,
+        description="Voice stability. Lower is more expressive/variable, higher is more consistent.",
+    )
+    similarity_boost: float = Field(
+        default=0.75,
+        ge=0.0,
+        le=1.0,
+        description="How closely the generated speech adheres to the original voice.",
+    )
     model: str = Field(
-        default="eleven_flash_v2_5",
+        default="eleven_turbo_v2_5",
         json_schema_extra={"examples": ELEVENLABS_TTS_MODELS},
     )
     base_url: str = Field(
@@ -500,6 +539,21 @@ class ElevenlabsTTSConfiguration(BaseServiceConfiguration):
             "regional compliance."
         ),
     )
+
+    @field_validator("speed", mode="before")
+    @classmethod
+    def _clamp_speed(cls, v):
+        # ElevenLabs only honors 0.7-1.2. The previous schema allowed 0.1-2.0,
+        # so stored configs may carry out-of-range values; clamp rather than
+        # reject so loading a legacy config can never 500 a live call (and an
+        # over-1.2 value, the "sped up" bug, is corrected on the way in).
+        if v is None:
+            return 1.0
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            return 1.0
+        return min(1.2, max(0.7, f))
 
 
 OPENAI_TTS_MODELS = ["gpt-4o-mini-tts"]
