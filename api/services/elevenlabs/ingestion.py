@@ -200,6 +200,44 @@ async def ingest_conversation(
     return run, True
 
 
+async def attach_recording(
+    session,
+    client,
+    run: WorkflowRunModel | None,
+    organization_id: int,
+) -> None:
+    """Fetch and store a run's recording, then point the run at it.
+
+    Best-effort by design. A call with a transcript and no audio is still a
+    useful record, so a storage failure degrades the row rather than rejecting
+    the whole ingestion — the alternative would be discarding a call we
+    successfully received because its audio did not arrive.
+    """
+    if run is None or not run.elevenlabs_conversation_id:
+        return
+
+    from api.services.elevenlabs.recordings import (
+        store_recording,
+        storage_backend_name,
+    )
+
+    try:
+        path = await store_recording(
+            client, organization_id, run.elevenlabs_conversation_id
+        )
+    except Exception as exc:
+        logger.opt(exception=True).error(
+            f"Recording storage failed for run {run.id}; the call is ingested "
+            f"without audio: {exc!r}"
+        )
+        return
+
+    if path:
+        run.recording_url = path
+        run.storage_backend = storage_backend_name()
+        session.add(run)
+
+
 async def reconcile_organization(
     session,
     client,
@@ -241,11 +279,14 @@ async def reconcile_organization(
         from api.services.elevenlabs.conversations import get_conversation
 
         full = await get_conversation(client, conversation_id)
-        _, was_created = await ingest_conversation(
+        run, was_created = await ingest_conversation(
             session, full, organization_id=organization_id
         )
         if was_created:
             created += 1
+            # Recording is fetched only for calls we actually stored, so a
+            # re-run over an already-ingested window costs no downloads.
+            await attach_recording(session, client, run, organization_id)
         else:
             skipped += 1
 

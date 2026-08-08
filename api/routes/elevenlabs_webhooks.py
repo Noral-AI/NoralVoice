@@ -26,8 +26,13 @@ from fastapi import APIRouter, Request, Response, status
 from loguru import logger
 
 from api.db.database import async_session
+from api.services.elevenlabs import (
+    MissingCredentialError,
+    get_client_for_organization,
+)
 from api.services.elevenlabs.ingestion import (
     WebhookVerificationError,
+    attach_recording,
     ingest_conversation,
     resolve_organization_for_agent,
     verify_webhook_signature,
@@ -75,7 +80,34 @@ async def post_call_webhook(request: Request) -> Response:
         return Response(status_code=status.HTTP_200_OK)
 
     async with async_session() as session:
-        run, created = await ingest_conversation(session, data)
+        # Resolved up front rather than read back off the run, because the run
+        # carries a workflow_id and the recording fetch needs the organization
+        # to resolve a credential and to build the per-client storage prefix.
+        agent_id = (data or {}).get("agent_id")
+        organization_id = (
+            await resolve_organization_for_agent(session, agent_id)
+            if agent_id
+            else None
+        )
+
+        run, created = await ingest_conversation(
+            session, data, organization_id=organization_id
+        )
+
+        if created and run is not None and organization_id is not None:
+            # Best-effort. A call with a transcript and no audio is still a
+            # useful record, and reconciliation will not retry the download
+            # because the run already exists — so this is logged, not raised.
+            try:
+                client = await get_client_for_organization(organization_id)
+                await attach_recording(session, client, run, organization_id)
+            except MissingCredentialError:
+                logger.warning(
+                    f"Ingested conversation {run.elevenlabs_conversation_id} but "
+                    "could not fetch its recording: no credential for "
+                    f"organization {organization_id}."
+                )
+
         await session.commit()
 
     if run is None:

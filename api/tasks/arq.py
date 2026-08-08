@@ -12,7 +12,7 @@ from api.tasks.function_names import FunctionNames
 setup_logging()
 
 # Now import ARQ and task dependencies
-from arq import create_pool
+from arq import create_pool, cron
 from arq.connections import ArqRedis, RedisSettings
 
 parsed_url = urlparse(REDIS_URL)
@@ -40,6 +40,7 @@ REDIS_SETTINGS = RedisSettings(
 )
 
 from api.services.integration_webhooks import fire_integration_webhooks
+from api.tasks.elevenlabs_reconciliation import reconcile_elevenlabs_conversations
 from api.tasks.campaign_tasks import (
     process_campaign_batch,
     sync_campaign_source,
@@ -63,8 +64,15 @@ class WorkerSettings:
         process_knowledge_base_document,
         fire_integration_webhooks,
         trigger_n8n_automation_event,
+        reconcile_elevenlabs_conversations,
     ]
-    cron_jobs = []
+    # Every 15 minutes. Frequent enough that a missed call surfaces well
+    # inside an operator's attention span, cheap because the listing is
+    # windowed and ingestion is idempotent, so an overlapping run writes
+    # nothing.
+    cron_jobs = [
+        cron(reconcile_elevenlabs_conversations, minute={0, 15, 30, 45}),
+    ]
     redis_settings = REDIS_SETTINGS
     max_jobs = 10
 

@@ -261,3 +261,76 @@ async def test_reconciliation_skips_what_is_already_stored():
 
     assert counts == {"seen": 1, "created": 0, "skipped": 1}
     session.add.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Recordings
+# ---------------------------------------------------------------------------
+
+
+def test_recording_path_is_per_client():
+    """The prefix is a real boundary: listing, lifecycle rules and per-client
+    export all key off it, so client id must come before conversation id."""
+    from api.services.elevenlabs.recordings import recording_path
+
+    assert recording_path(100, "conv_1") == "recordings/org-100/conv_1.mp3"
+    assert recording_path(200, "conv_1").startswith("recordings/org-200/")
+
+
+async def test_a_missing_recording_is_not_an_error():
+    """Zero-retention agents store no audio by design, and a call can end
+    before audio exists. Treating those as failures would bury real ones."""
+    from api.services.elevenlabs.client import ElevenLabsAPIError
+    from api.services.elevenlabs import recordings
+
+    with patch.object(
+        recordings,
+        "get_conversation_audio",
+        new=AsyncMock(
+            side_effect=ElevenLabsAPIError(404, "none", method="GET", path="/a")
+        ),
+    ):
+        assert await recordings.store_recording(MagicMock(), 100, "conv_1") is None
+
+
+async def test_a_recording_failure_does_not_reject_the_ingested_call():
+    """A call with a transcript and no audio is still a useful record."""
+    from api.services.elevenlabs import ingestion
+
+    run = MagicMock(id=5, elevenlabs_conversation_id="conv_1")
+    session = MagicMock()
+    session.add = MagicMock()
+
+    with patch(
+        "api.services.elevenlabs.recordings.store_recording",
+        new=AsyncMock(side_effect=RuntimeError("storage down")),
+    ):
+        await ingestion.attach_recording(session, MagicMock(), run, 100)
+
+    # Degraded, not raised — and crucially the run was not pointed at a file
+    # that does not exist, which would render a broken player in the dashboard.
+    session.add.assert_not_called()
+
+
+async def test_a_stored_recording_is_attached_to_the_run():
+    from api.services.elevenlabs import ingestion
+
+    run = MagicMock(id=5, elevenlabs_conversation_id="conv_1")
+    session = MagicMock()
+    session.add = MagicMock()
+
+    with (
+        patch(
+            "api.services.elevenlabs.recordings.store_recording",
+            new=AsyncMock(return_value="recordings/org-100/conv_1.mp3"),
+        ),
+        patch(
+            "api.services.elevenlabs.recordings.storage_backend_name",
+            return_value="minio",
+        ),
+    ):
+        await ingestion.attach_recording(session, MagicMock(), run, 100)
+
+    assert run.recording_url == "recordings/org-100/conv_1.mp3"
+    assert run.storage_backend == "minio"
+    session.add.assert_called_once_with(run)
