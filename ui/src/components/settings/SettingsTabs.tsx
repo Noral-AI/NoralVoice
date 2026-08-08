@@ -8,6 +8,7 @@ import { useAppConfig } from "@/context/AppConfigContext";
 
 import ApiKeysTab from "./tabs/ApiKeysTab";
 import CloudServicesTab from "./tabs/CloudServicesTab";
+import LlmTab from "./tabs/LlmTab";
 import ModelsTab from "./tabs/ModelsTab";
 import OrganizationTab from "./tabs/OrganizationTab";
 import PlatformTab from "./tabs/PlatformTab";
@@ -21,6 +22,7 @@ type TabId =
   | "profile"
   | "organization"
   | "voice-provider"
+  | "llm"
   | "telephony"
   | "models"
   | "webhook-auth"
@@ -33,6 +35,7 @@ const ALL_TABS: ReadonlyArray<{ id: TabId; label: string }> = [
   { id: "profile", label: "Profile" },
   { id: "organization", label: "Organization" },
   { id: "voice-provider", label: "Voice provider" },
+  { id: "llm", label: "LLM" },
   { id: "telephony", label: "Telephony" },
   { id: "models", label: "Models" },
   { id: "webhook-auth", label: "Webhook auth" },
@@ -118,6 +121,8 @@ function renderTab(id: TabId) {
       return <OrganizationTab />;
     case "voice-provider":
       return <VoiceProviderTab />;
+    case "llm":
+      return <LlmTab />;
     case "telephony":
       return <TelephonyTab />;
     case "models":

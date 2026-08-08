@@ -13,6 +13,7 @@ from api.routes.elevenlabs_webhooks import router as elevenlabs_webhooks_router
 from api.routes.embed import router as embed_router
 from api.routes.integration_webhooks import router as integration_webhooks_router
 from api.routes.knowledge_base import router as knowledge_base_router
+from api.routes.llm_settings import router as llm_settings_router
 from api.routes.looptalk import router as looptalk_router
 from api.routes.n8n_integration import router as n8n_integration_router
 from api.routes.node_types import router as node_types_router
@@ -50,6 +51,7 @@ router.include_router(integration_webhooks_router)
 router.include_router(elevenlabs_webhooks_router)
 router.include_router(agents_router)
 router.include_router(calls_router)
+router.include_router(llm_settings_router)
 router.include_router(n8n_integration_router)
 router.include_router(organization_router)
 router.include_router(s3_router)

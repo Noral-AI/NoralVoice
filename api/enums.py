@@ -85,6 +85,10 @@ class OrganizationConfigurationKey(Enum):
     TWILIO_CONFIGURATION = (
         "TWILIO_CONFIGURATION"  # Deprecated - for backward compatibility
     )
+    # Which LLM this organization's voice agents run on. Org-level, not
+    # per-agent: one choice for the platform, inherited by every agent it
+    # creates. Not secret-bearing — it holds a model identifier, never a key.
+    LLM_SELECTION = "LLM_SELECTION"
     LANGFUSE_CREDENTIALS = (
         "LANGFUSE_CREDENTIALS"  # Org-level Langfuse tracing credentials
     )

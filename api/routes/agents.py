@@ -17,6 +17,7 @@ from pydantic import BaseModel
 
 from api.db import db_client
 from api.db.models import UserModel
+from api.routes.llm_settings import get_selected_llm
 from api.services.auth.depends import get_user
 from api.services.elevenlabs import (
     ElevenLabsAPIError,
@@ -48,8 +49,10 @@ class CreateAgentRequest(BaseModel):
     first_message: Optional[str] = None
     language: str = "en"
     voice_id: Optional[str] = None
-    llm: Optional[str] = None
     data_collection: Optional[dict[str, Any]] = None
+    # No `llm` field by design. The model is a platform-level choice made once
+    # under Settings -> LLM and inherited by every agent, so it is not
+    # something to get wrong per agent or to drift between them.
 
 
 class UpdateAgentRequest(BaseModel):
@@ -147,6 +150,10 @@ async def create_organization_agent(
     organization_id = _require_organization(user)
     client = await _resolve_client(organization_id)
 
+    # Inherited from the organization's choice rather than passed in, so every
+    # agent this platform creates runs on the model the operator selected once.
+    selection = await get_selected_llm(organization_id)
+
     try:
         created = await create_agent(
             client,
@@ -155,7 +162,7 @@ async def create_organization_agent(
             first_message=request.first_message,
             language=request.language,
             voice_id=request.voice_id,
-            llm=request.llm,
+            llm=selection["identifier"],
             data_collection=request.data_collection,
         )
     except ElevenLabsAPIError as exc:

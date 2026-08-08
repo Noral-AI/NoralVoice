@@ -153,6 +153,10 @@ def test_create_resolves_the_client_for_the_callers_org():
     with (
         patch("api.routes.agents.get_client_for_organization", new=resolver),
         patch(
+            "api.routes.agents.get_selected_llm",
+            new=AsyncMock(return_value={"identifier": "gemini-2.5-flash"}),
+        ),
+        patch(
             "api.routes.agents.create_agent",
             new=AsyncMock(return_value={"agent_id": "agent_new"}),
         ),
@@ -184,6 +188,10 @@ def test_creating_an_agent_sets_retention_off_the_vendor_default():
             new=AsyncMock(return_value=MagicMock()),
         ),
         patch(
+            "api.routes.agents.get_selected_llm",
+            new=AsyncMock(return_value={"identifier": "gemini-2.5-flash"}),
+        ),
+        patch(
             "api.routes.agents.create_agent",
             new=AsyncMock(return_value={"agent_id": "agent_new"}),
         ),
@@ -213,6 +221,10 @@ def test_a_failed_retention_call_does_not_fail_agent_creation():
         patch(
             "api.routes.agents.get_client_for_organization",
             new=AsyncMock(return_value=MagicMock()),
+        ),
+        patch(
+            "api.routes.agents.get_selected_llm",
+            new=AsyncMock(return_value={"identifier": "gemini-2.5-flash"}),
         ),
         patch(
             "api.routes.agents.create_agent",
