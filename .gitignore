@@ -19,3 +19,6 @@ coturn/
 dograh_pcm_cache/
 node_modules/
 .vscode
+
+# local agent worktrees and session state
+.claude/
