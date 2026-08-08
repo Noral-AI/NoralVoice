@@ -1066,13 +1066,33 @@ class ExternalCredentialModel(Base):
         default=WebhookCredentialType.NONE.value,
     )
 
-    # Encrypted credential data (JSON)
-    # Structure depends on credential_type:
+    # Encrypted credential data (JSON).
+    #
+    # Sealed rows hold {"__enc__": "v1:<base64>"} — the whole document encrypted
+    # as one envelope, so a sensitive field added later cannot be left in the
+    # clear by omission. See api/services/crypto/.
+    #
+    # Rows written before encryption existed hold their fields in the clear and
+    # still read correctly; unseal_credential_data() discriminates on the
+    # "__enc__" key. Once decrypted, the structure depends on credential_type:
     # - api_key: {"header_name": "X-API-Key", "api_key": "value"}
     # - bearer_token: {"token": "value"}
     # - basic_auth: {"username": "user", "password": "value"}
     # - custom_header: {"header_name": "X-Custom", "header_value": "value"}
     credential_data = Column(JSON, nullable=False, default=dict)
+
+    # Which upstream this credential authenticates against, e.g. "elevenlabs".
+    # NULL for the webhook credentials this table originally held.
+    provider = Column(String, nullable=True, index=True)
+
+    # Last four characters of the secret, stored in the clear so the settings
+    # page can show which key is installed without the read path decrypting it.
+    # Empty for secrets shorter than eight characters — see crypto.last_four.
+    last_four = Column(String(4), nullable=True)
+
+    # When the secret was last replaced. Distinct from updated_at, which also
+    # moves when only the name or description changes.
+    rotated_at = Column(DateTime(timezone=True), nullable=True)
 
     # Audit fields
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
