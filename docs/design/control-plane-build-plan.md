@@ -218,9 +218,9 @@ New `/agents` route beside the existing `/workflow` editor: client switcher, age
 1. **Reference agent** — a purpose-built test agent exercising **all five action types** from §4.2 at once: extraction, cold transfer, SMS opt-in, Cal.com booking, pre-call fetch. Not a client. This is what proves the platform, and it is the agent to iterate on freely.
 2. **Hardest real client**, chosen by the Phase 0.6 ranking — not the easiest. Unregulated, per §6.
 
-**Cross-repo (NoralOS):** the `noralai.noralvoice` plugin (32 tools, live on `agent.noral.ai`) and both typed SDKs author workflow graphs. Decide here — re-express over ElevenLabs agents, or freeze until Phase 5 — and coordinate before merging.
-
 **Acceptance:** reference agent handles all five capabilities on a real call; then the gate client runs real inbound **and** outbound, appearing in the dashboard with recording and transcript. No engine code deleted.
+
+*(The NoralOS cross-repo gate that stood here is removed — decision 2026-08-08: the `noralai.noralvoice` plugin is not needed. See §7 Phase 5 step 3.)*
 
 ### Phase 4 — Migrate remaining clients
 Per client, in Phase 0.6 ranked order, unregulated first:
@@ -239,8 +239,13 @@ Per client, in Phase 0.6 ranked order, unregulated first:
 
 1. **Data retention first (H6).** `workflow_runs` FKs to `workflows`, `workflow_definitions`, `campaigns`, `queued_runs` (`api/db/models.py:453,457,492,494`) — three of those four tables get dropped. Denormalise what reporting needs onto `workflow_runs`, null the dead FKs, and **verify a pre-migration call still resolves end-to-end with playable recording** before any drop runs.
 2. Delete: `pipecat/` submodule; `api/services/pipecat|audio|smart_turn|looptalk|campaign`; `workflow/pipecat_engine*.py`, `workflow_graph.py`, `node_specs/`; `telephony/providers/`; `api/native/rnnoise`; `dograh_pcm_cache`; `evals/`; routes `webrtc_signaling`, `agent_stream`, `turn_credentials`, `telephony`, `campaign`, `looptalk`, embed stack; `ui/src/components/flow/`, `ui/src/app/workflow|campaigns|looptalk|telephony-configurations`.
-3. Drop `coturn` from compose + `config/coturn`; slim `api/requirements.txt`; collapse `configuration/registry.py` to ElevenLabs (+ BYO-LLM).
-4. Phase-5 table drops (§13) and the `workflow_runs` column cleanup (M8).
+3. **Graph-authoring surface (decision 2026-08-08 — the `noralai.noralvoice` plugin is not needed).** Delete `api/mcp_server/` (13 files; `create_workflow`, `save_workflow`, `get_workflow_code`, `node_types`, `catalog`, `workflows` — all graph-shaped), plus `sdk/python/src/noralai_voice/typed/`, `sdk/typescript/src/typed/`, and the `workflow.py` / `workflow.ts` graph builders.
+
+   **Keep** the SDK codegen scaffolding: `codegen.py`, `_generated_client`, `_generated_models`, `client`, `errors`, `_validation` are driven by `@sdk_expose` across 12 route files and are generic API-client generation, not graph authoring. They retarget at the control-plane routes rather than being deleted.
+
+   Coordinate the removal with the NoralOS repo — the plugin is live on `agent.noral.ai`, so this breaks it deliberately rather than accidentally. Consequence accepted: NoralOS agents lose programmatic voice-agent authoring; the control-plane UI is the authoring surface from here.
+4. Drop `coturn` from compose + `config/coturn`; slim `api/requirements.txt`; collapse `configuration/registry.py` to ElevenLabs (+ BYO-LLM).
+5. Phase-5 table drops (§13) and the `workflow_runs` column cleanup (M8).
 
 **Acceptance (M7):** slim stack boots; `grep -ri "pipecat\|coturn\|webrtc"` clean in `api/` and `ui/src/`; **test count and coverage recorded before and after, with every removed test file justified against a specific deleted feature**; a live end-to-end call verified *after* the deletion deploys; a pre-migration historical call still resolves.
 
@@ -359,7 +364,7 @@ Phase 4 dominates and is the one to resource deliberately.
 2. ~~Shelf branch local-only~~ — resolved: pushed to `origin/shelf/pre-control-plane-2026-08-08`.
 3. **Verified restorable backup** — blocks the Phase 1a data migration step only, and is taken immediately before it, not in advance (§10.4).
 4. **Compliance confirmations** (§6) — block Phase 4 for the regulated clients, not the whole phase. Now also need to account for vendor-side commingling (§5.3).
-5. **NoralOS plugin decision** — due at Phase 3.
+5. ~~NoralOS plugin decision~~ — resolved 2026-08-08: not needed. Removed as a Phase 3 gate; the graph-authoring surface is deleted in Phase 5 step 3, coordinated with the NoralOS repo.
 6. `.claude/` was added to `.gitignore` in passing — keep or revert.
 
 ---
