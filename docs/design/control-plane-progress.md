@@ -1,6 +1,24 @@
 # Control Plane — Progress
 
-**Current phase:** 0.6
+> ## ⚠️ SCOPE CHANGE — 2026-08-08, from the user, direct quote
+> **"i do not need all the agent copied from synthflow. i just need a working platform"**
+>
+> **Phase 0.6 ends here. Phase 4's mass migration is descoped.** The goal is a working control plane, not a 91-agent port. Task 6's data already supported this: only 13 of 91 agents have a number, and the rest are dead demos.
+>
+> **What this cancels:**
+> - Phase 4 as "migrate 91 agents" — gone. Agents get authored fresh in our UI.
+> - Phase 0.6 tasks 3, 4, 5 (n8n prototypes, reliability baseline) — these existed to de-risk a migration that is no longer happening. Left unchecked and unblocked, not silently ticked.
+> - §8 behavioural equivalence, baseline capture/replay/diff — no agent is being recreated, so there is nothing to diff against.
+> - The D5 gate-client question — moot.
+>
+> **What this leaves — the build path to §15:**
+> **1a** credentials + encryption → **1b** ElevenLabs client + tenancy → **2** conversation ingestion → **3** agent editor → **6** dashboards → **7** isolation/RBAC → **8** deploy.
+>
+> **Assumption I am proceeding on:** "working platform" means plan §15's definition of done, minus the migration — an operator logs in, creates and publishes an agent from our UI, a number takes and makes calls on ElevenLabs, and every call lands in our dashboard with recording, transcript and extracted fields. Say so if you meant something narrower.
+>
+> Phases 5 (engine deletion) and 9 remain human-gated exactly as before — descoping the migration does **not** unlock deleting the engine, which still serves live calls.
+
+**Current phase:** 1a (was 0.6)
 **Branch:** feat/control-plane-phase-0
 **Last updated:** 2026-08-08 — per-task commit SHAs are recorded against each task below; this header no longer chases its own SHA.
 **Blocked on:** nothing phase-wide. Tasks 3 and 4 blocked on B1 (n8n access + authority); task 5 waiting on Q1. Tasks 6 and 7 are clear and are next.
@@ -10,11 +28,25 @@ Working artifact: [control-plane-phase-0.6-capability-spike.md](./control-plane-
 ## Phase 0.6 — Capability spike
 - [x] Verify ElevenLabs feature mapping for each §4.3 row — *capability spike §1* — `5d09f0d`
 - [x] Check retention / privacy controls — *capability spike §2* — `e0d815a`
-- [ ] Prototype Cal.com booking in n8n — **BLOCKED, see B1**
-- [ ] Prototype SMS opt-in in n8n — **BLOCKED, see B1**
-- [ ] Reliability baseline from workflow_runs — *open question Q1 before starting*
-- [ ] Per-agent complexity profile (91 agents) → ranked order + gate client
-- [ ] Set BYO-LLM p95 latency budget
+- [~] Prototype Cal.com booking in n8n — **DESCOPED** (was blocked on B1; migration cancelled)
+- [~] Prototype SMS opt-in in n8n — **DESCOPED** (was blocked on B1; migration cancelled)
+- [~] Reliability baseline from workflow_runs — **DESCOPED** (existed to gate migrated agents against a baseline)
+- [x] Per-agent complexity profile (91 agents) → ranked order + gate client — *capability spike §3* — `a46b21f`
+- [~] Set BYO-LLM p95 latency budget — **DEFERRED** to whenever BYO-LLM is actually reached (§9.2 cap still stands)
+
+## Phase 1a — Credentials + encryption (current)
+Design: plan §10. Six steps.
+- [x] Review the uncommitted crypto work from an earlier start — complete and correct, matched §10.3 exactly; 35 tests passing. Committed rather than rewritten.
+- [x] Crypto module — PyNaCl SecretBox, `v1:` envelope (§10.3) — `687e464`
+- [x] Transparent encrypt/decrypt in the credential client, legacy plaintext passthrough — `cccf922`
+- [ ] Schema migration — `provider`, `last_four`, `rotated_at` (single head `e4a2b9d3f715`) ⬅ **next**
+- [ ] Data migration of existing plaintext — **S2 HARD STOP, needs a verified backup**
+- [ ] Set/rotate/revoke routes
+- [ ] Settings UI — key entered by a human, never by me (**S1**)
+
+**Where the seam is:** writes seal in `WebhookCredentialClient.create_credential` / `update_credential`; reads unseal in `credential_auth.build_auth_header`. Stored shape is `{"__enc__": "v1:…"}`. Legacy plaintext rows read correctly with no key configured, so this is deployable before the data migration and safe against a part-migrated table.
+
+**Note for the S2 step:** §10.4 scopes the data migration to `external_credentials.credential_data` **plus** the LLM/TTS keys in `user_configurations.configuration` and `organization_configurations.value`. Those latter two are *not* covered by the seal/unseal seam above — they have their own read paths, which need the same treatment before their rows are encrypted, or global LLM breaks. Not yet built.
 
 ## Findings that change the plan
 
