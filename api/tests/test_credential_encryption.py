@@ -14,6 +14,7 @@ import pytest
 from nacl import secret, utils
 
 from api.services.crypto import (
+    ENCRYPTED_FIELD_KEY,
     CredentialEncryptionError,
     MissingEncryptionKeyError,
     decrypt_json,
@@ -22,7 +23,10 @@ from api.services.crypto import (
     encrypt_secret,
     generate_key,
     is_encrypted,
+    is_sealed,
     last_four,
+    seal_credential_data,
+    unseal_credential_data,
 )
 from api.services.crypto.secrets import ENCRYPTION_KEY_ENV_VAR
 
@@ -256,3 +260,91 @@ def test_last_four(value, expected):
 def test_encrypt_rejects_non_string(encryption_key):
     with pytest.raises(CredentialEncryptionError, match="expects a string"):
         encrypt_secret({"not": "a string"})
+
+
+# ---------------------------------------------------------------------------
+# Sealing for JSON-column storage
+#
+# The column holds a JSON object, not a bare string, so a sealed credential is
+# stored as {"__enc__": "v1:…"}. These tests pin that shape, because the data
+# migration and every legacy row depend on it being distinguishable.
+# ---------------------------------------------------------------------------
+
+
+def test_seal_produces_the_documented_wrapper(encryption_key):
+    sealed = seal_credential_data({"api_key": "sk-live-abcd1234"})
+
+    assert set(sealed) == {ENCRYPTED_FIELD_KEY}
+    assert is_encrypted(sealed[ENCRYPTED_FIELD_KEY])
+
+
+def test_seal_unseal_round_trip(encryption_key):
+    original = {"header_name": "X-API-Key", "api_key": "sk-live-abcd1234"}
+
+    assert unseal_credential_data(seal_credential_data(original)) == original
+
+
+def test_sealed_document_hides_every_field(encryption_key):
+    sealed = seal_credential_data(
+        {"username": "admin", "password": "hunter2", "header_name": "X-API-Key"}
+    )
+    blob = json.dumps(sealed)
+
+    for secret_value in ("admin", "hunter2", "X-API-Key"):
+        assert secret_value not in blob
+
+
+def test_unseal_passes_through_legacy_plaintext_row(encryption_key):
+    """A row written before encryption existed must still read correctly."""
+    legacy = {"token": "legacy-plaintext-token"}
+
+    assert unseal_credential_data(legacy) == legacy
+
+
+def test_unseal_legacy_row_works_without_a_key_configured(no_encryption_key):
+    """Deploying this must not break an installation that has no key yet."""
+    legacy = {"token": "legacy-plaintext-token"}
+
+    assert unseal_credential_data(legacy) == legacy
+
+
+@pytest.mark.parametrize("empty", [None, {}])
+def test_unseal_handles_empty_credential_data(empty):
+    assert unseal_credential_data(empty) == {}
+
+
+def test_is_sealed_discriminates(encryption_key):
+    assert is_sealed(seal_credential_data({"a": "b"})) is True
+    assert is_sealed({"api_key": "plaintext"}) is False
+    assert is_sealed(None) is False
+    assert is_sealed("v1:not-a-dict") is False
+
+
+def test_sealing_is_not_doubly_applied_by_accident(encryption_key):
+    """Sealing twice is detectable, so the migration can guard on is_sealed."""
+    once = seal_credential_data({"api_key": "sk-live-abcd1234"})
+    twice = seal_credential_data(once)
+
+    # Both are sealed, so a naive migration would double-encrypt. is_sealed is
+    # what stops that, and unsealing twice must recover the intermediate form.
+    assert is_sealed(twice)
+    assert unseal_credential_data(twice) == once
+
+
+def test_unseal_rejects_tampered_sealed_document(encryption_key):
+    sealed = seal_credential_data({"api_key": "sk-live-abcd1234"})
+    envelope = sealed[ENCRYPTED_FIELD_KEY]
+    # Flip a character in the base64 body.
+    body = envelope[3:]
+    tampered = "v1:" + ("A" if body[0] != "A" else "B") + body[1:]
+
+    with pytest.raises(CredentialEncryptionError):
+        unseal_credential_data({ENCRYPTED_FIELD_KEY: tampered})
+
+
+def test_unseal_sealed_row_without_a_key_raises(no_encryption_key):
+    """A sealed row cannot be read without the key, and says so clearly."""
+    sealed = {ENCRYPTED_FIELD_KEY: "v1:c29tZS1jaXBoZXJ0ZXh0"}
+
+    with pytest.raises(MissingEncryptionKeyError):
+        unseal_credential_data(sealed)

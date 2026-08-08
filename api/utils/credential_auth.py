@@ -8,6 +8,8 @@ and custom tool execution.
 import base64
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
+from api.services.crypto import unseal_credential_data
+
 if TYPE_CHECKING:
     from api.db.models import ExternalCredentialModel
 
@@ -29,7 +31,9 @@ def build_auth_header(credential: "ExternalCredentialModel") -> Dict[str, str]:
         is not recognized or is 'none'
     """
     cred_type = credential.credential_type
-    cred_data = credential.credential_data or {}
+    # Rows written before encryption existed hold their fields in the clear and
+    # pass through unchanged, so this works against a part-migrated table.
+    cred_data = unseal_credential_data(credential.credential_data)
 
     if cred_type == "bearer_token":
         token = cred_data.get("token", "")

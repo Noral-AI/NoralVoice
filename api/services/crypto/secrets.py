@@ -197,6 +197,44 @@ def decrypt_json(envelope: str) -> dict:
     return parsed
 
 
+#: Key under which a sealed document is stored inside a JSON column.
+ENCRYPTED_FIELD_KEY: Final[str] = "__enc__"
+
+
+def seal_credential_data(data: dict) -> dict:
+    """Wrap a credential document for storage in a JSON column.
+
+    Returns ``{"__enc__": "v1:…"}`` rather than a bare envelope string so the
+    column keeps holding a JSON *object*, which is what the existing schema and
+    every existing row expect. The wrapper key is also what lets
+    :func:`unseal_credential_data` tell a sealed row from a legacy plaintext one
+    without a schema flag.
+    """
+    return {ENCRYPTED_FIELD_KEY: encrypt_json(data)}
+
+
+def is_sealed(stored: Any) -> bool:
+    """Return True if ``stored`` is a document produced by :func:`seal_credential_data`."""
+    return isinstance(stored, dict) and ENCRYPTED_FIELD_KEY in stored
+
+
+def unseal_credential_data(stored: dict | None) -> dict:
+    """Return the plaintext credential document, sealed or not.
+
+    Legacy rows hold their fields in the clear and are returned unchanged, so
+    this is safe to deploy before the data migration has run — and safe to run
+    against a mixed table while it is running.
+
+    Raises:
+        CredentialEncryptionError: if a sealed document fails to decrypt.
+    """
+    if not stored:
+        return {}
+    if is_sealed(stored):
+        return decrypt_json(stored[ENCRYPTED_FIELD_KEY])
+    return stored
+
+
 def last_four(plaintext: str) -> str:
     """Return the last four characters of a secret, for display in the UI.
 

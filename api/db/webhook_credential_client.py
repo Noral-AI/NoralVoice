@@ -8,6 +8,7 @@ from sqlalchemy import select, update
 
 from api.db.base_client import BaseDBClient
 from api.db.models import ExternalCredentialModel
+from api.services.crypto import seal_credential_data
 
 
 class WebhookCredentialClient(BaseDBClient):
@@ -42,7 +43,9 @@ class WebhookCredentialClient(BaseDBClient):
                 name=name,
                 description=description,
                 credential_type=credential_type,
-                credential_data=credential_data,
+                # Sealed here rather than in the route so that no caller can
+                # write a plaintext credential by forgetting to encrypt first.
+                credential_data=seal_credential_data(credential_data),
             )
 
             session.add(credential)
@@ -144,7 +147,7 @@ class WebhookCredentialClient(BaseDBClient):
             if credential_type is not None:
                 update_values["credential_type"] = credential_type
             if credential_data is not None:
-                update_values["credential_data"] = credential_data
+                update_values["credential_data"] = seal_credential_data(credential_data)
 
             await session.execute(
                 update(ExternalCredentialModel)
