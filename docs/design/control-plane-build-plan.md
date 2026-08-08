@@ -46,7 +46,7 @@ v2 was reviewed adversarially; 21 findings resulted. All are closed here.
 | **M8** `workflow_runs` legacy debt glossed | Column cleanup scheduled into Phase 5. |
 | **L1** Security work on the critical path | Phase 0.6 spike now precedes Phase 1a; they can run in parallel. |
 | **L2** No effort estimate | §11. |
-| **L3** Shelf branch local-only | §11, open item. |
+| **L3** Shelf branch local-only | Resolved — pushed to `origin/shelf/pre-control-plane-2026-08-08`. |
 | **L4** `.gitignore` changed in passing | Noted; keep or revert on request. |
 
 ---
@@ -187,6 +187,7 @@ Closes C1/C2/M1/M4 and de-risks everything after it. Read-only against both plat
 3. **Prototype the two real gaps** end-to-end in n8n: Cal.com booking (slots/days/timezone) and SMS opt-in. These are the only capabilities with no native counterpart.
 4. **Reliability baseline** from `workflow_runs` — noting `WorkflowRunState` has no failure state (`api/enums.py:66`), so use initialized-never-completed as the proxy and document the method.
 5. **Per-agent complexity profile** for all 91 agents: action types used, extractor count, transfer targets, telephony config. Output ranks agents and **names the Phase 3 gate client**.
+6. **Set the BYO-LLM p95 latency budget** referenced by §9.2, so the cap has a number behind it rather than a placeholder.
 
 **Acceptance:** a written gap report; a working n8n booking prototype; a stated reliability baseline; a ranked migration order; retention controls documented. **If a gap has no viable mapping, that surfaces here — before anything is built.**
 
@@ -198,7 +199,7 @@ Full design in §10. Six steps: crypto module → transparent encrypt/decrypt in
 ### Phase 1b — ElevenLabs client + tenancy
 `api/services/elevenlabs/` — agents (CRUD, versions, publish), knowledge base, tools (webhook/client/MCP + transfer-to-number, voicemail detection, end-call), phone numbers (Twilio import, assign, outbound, batch), conversations (list, get, transcript, audio, signed URL, analysis), workspace (secrets, env vars). Additive migration per §13. Per-client credential resolution on every call.
 
-**Acceptance:** list a real client's agents from that client's own workspace; no code path can reach a workspace the caller doesn't own; mocked-client unit tests; suite green; **prod still serving on the engine**.
+**Acceptance:** list a client's agents through the per-organization credential path; **no code path reaches ElevenLabs without an organization-resolved credential** — asserted by test, since on a shared workspace this is the control doing the isolation work; mocked-client unit tests; suite green; **prod still serving on the engine**.
 
 ### Phase 2 — Conversation ingestion
 Dual-source — engine and ElevenLabs calls both land in `workflow_runs`.
@@ -225,7 +226,7 @@ New `/agents` route beside the existing `/workflow` editor: client switcher, age
 Per client, in Phase 0.6 ranked order, unregulated first:
 
 1. Capture the behavioral baseline (§8) **before** touching anything.
-2. Recreate agent + actions on the client's ElevenLabs workspace.
+2. Recreate agent + actions on ElevenLabs, tagged to the client and bound to that organization's credential row.
 3. Replay the baseline; diff extracted fields and transfer decisions; resolve every difference.
 4. **Cutover runbook (M5):** low-traffic window; update the Twilio number config; verify inbound *and* outbound on a live call; monitor for missed calls for an agreed period. Note the documented failure mode in this project — a number whose config never gets PATCHed silently keeps serving its old destination.
 5. **Rollback (H5):** if the client degrades, revert the Twilio number config and re-enable the engine workflow. Written per client before cutover, not improvised after.
@@ -249,9 +250,9 @@ Calls dashboard (table, audio player, transcript, sentiment, extracted fields) a
 **Acceptance:** renders real per-client data; reconciles against ElevenLabs' own history for a sample period.
 
 ### Phase 7 — Isolation hardening + RBAC
-Tenant scoping on every query and every ElevenLabs call; RBAC (Noral admin vs. per-client). Workspace-per-client wiring verified end to end.
+Tenant scoping on every query and every ElevenLabs call; RBAC (Noral admin vs. per-client). The §5.2 controls verified end to end, and the §5.4 forward path exercised at least once — move one organization to a distinct workspace id and credential, and confirm it takes effect with no code change.
 
-**Acceptance:** an automated test proving no endpoint returns cross-client data, running in CI; role checks enforced and tested.
+**Acceptance:** an automated test proving no endpoint returns cross-client data, running in CI; a test proving no ElevenLabs call can be made without an organization-resolved credential; role checks enforced and tested; the forward-path swap demonstrated.
 
 ### Phase 8 — Cleanup, docs, deploy
 Dead config, `README`, `deploy/noral` for the slim stack, CI.
@@ -402,4 +403,4 @@ Reused as-is: `workflow_runs.recording_url` / `transcript_url` / `storage_backen
 
 ## 15. Definition of done
 
-A Noral operator logs in, picks a client, creates/edits/publishes that client's agent from our branded UI, the client's number takes and makes calls handled entirely by ElevenLabs, and every call lands in our dashboard with a playable recording, full transcript, sentiment, extracted fields, and usage rolling up into per-client billing — each client isolated in its own workspace, at or above the pre-migration reliability baseline, **with zero real-time voice infrastructure running in this repo.**
+A Noral operator logs in, picks a client, creates/edits/publishes that client's agent from our branded UI, the client's number takes and makes calls handled entirely by ElevenLabs, and every call lands in our dashboard with a playable recording, full transcript, sentiment, extracted fields, and usage rolling up into per-client billing — every client boundary enforced in our own data and credential paths (§5.2), the vendor-side residual documented and bounded (§5.3), at or above the pre-migration reliability baseline, **with zero real-time voice infrastructure running in this repo.**
