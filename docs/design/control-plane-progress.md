@@ -2,7 +2,7 @@
 
 **Current phase:** 0.6
 **Branch:** feat/control-plane-phase-0
-**Last updated:** 2026-08-08 · 7c2f9f3
+**Last updated:** 2026-08-08 — per-task commit SHAs are recorded against each task below; this header no longer chases its own SHA.
 **Blocked on:** nothing
 
 Working artifact: [control-plane-phase-0.6-capability-spike.md](./control-plane-phase-0.6-capability-spike.md)
