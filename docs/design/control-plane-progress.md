@@ -39,10 +39,16 @@ Design: plan §10. Six steps.
 - [x] Review the uncommitted crypto work from an earlier start — complete and correct, matched §10.3 exactly; 35 tests passing. Committed rather than rewritten.
 - [x] Crypto module — PyNaCl SecretBox, `v1:` envelope (§10.3) — `687e464`
 - [x] Transparent encrypt/decrypt in the credential client, legacy plaintext passthrough — `cccf922`
-- [ ] Schema migration — `provider`, `last_four`, `rotated_at` (single head `e4a2b9d3f715`) ⬅ **next**
+- [x] Schema migration — `provider`, `last_four`, `rotated_at` — `53a6bab` (head now `a1c4e7b920f3`, still single)
+- [x] Set/rotate/revoke routes — `188e26e` — `PUT|GET|DELETE /api/v1/credentials/providers/{provider}`
+- [ ] Settings UI — key entered by a human, never by me (**S1**) ⬅ **next**
 - [ ] Data migration of existing plaintext — **S2 HARD STOP, needs a verified backup**
-- [ ] Set/rotate/revoke routes
-- [ ] Settings UI — key entered by a human, never by me (**S1**)
+
+**Test state:** 109 passing across the credential suite (`test_provider_credentials`, `test_credential_encryption`, `test_custom_tools`, `test_integration_webhooks`, `test_masked_key_rejection`). No Postgres needed — these are in-process with the DB client mocked.
+
+**Two pre-existing problems in this environment, neither mine:**
+1. `test_noralai_voice.py` and `test_noralai_voice_typed.py` fail at *collection* — `ModuleNotFoundError: noralai_voice`. The SDK at `sdk/python` is not installed in the venv. Any full-suite run aborts on these two before running anything.
+2. Full-suite collection takes **~30 minutes**. Run targeted files, not `pytest api/tests/`.
 
 **Where the seam is:** writes seal in `WebhookCredentialClient.create_credential` / `update_credential`; reads unseal in `credential_auth.build_auth_header`. Stored shape is `{"__enc__": "v1:…"}`. Legacy plaintext rows read correctly with no key configured, so this is deployable before the data migration and safe against a part-migrated table.
 
