@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import func, select
 
-from api.db.database import async_session
+from api.db import db_client
 from api.db.models import UserModel, WorkflowModel, WorkflowRunModel
 from api.services.auth.depends import get_user
 
@@ -82,7 +82,7 @@ async def list_calls(
     """List this organization's calls, newest first."""
     organization_id = _require_organization(user)
 
-    async with async_session() as session:
+    async with db_client.async_session() as session:
         # Joined to workflows and filtered on organization_id in SQL — never
         # fetched broadly and filtered afterwards.
         conditions = [
@@ -121,7 +121,7 @@ async def usage_summary(
     """Per-period call and duration totals, broken down by agent."""
     organization_id = _require_organization(user)
 
-    async with async_session() as session:
+    async with db_client.async_session() as session:
         conditions = [
             WorkflowModel.organization_id == organization_id,
             WorkflowRunModel.elevenlabs_conversation_id.isnot(None),
@@ -164,7 +164,7 @@ async def get_call(
     """
     organization_id = _require_organization(user)
 
-    async with async_session() as session:
+    async with db_client.async_session() as session:
         result = await session.execute(
             select(WorkflowRunModel, WorkflowModel.name)
             .join(WorkflowModel, WorkflowRunModel.workflow_id == WorkflowModel.id)

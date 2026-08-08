@@ -22,7 +22,7 @@ from datetime import timedelta
 from loguru import logger
 from sqlalchemy import select
 
-from api.db.database import async_session
+from api.db import db_client
 from api.db.models import OrganizationModel
 from api.services.elevenlabs import MissingCredentialError, get_client_for_organization
 from api.services.elevenlabs.ingestion import (
@@ -50,7 +50,7 @@ async def reconcile_elevenlabs_conversations(ctx, window_hours: int | None = Non
 
     totals = {"organizations": 0, "seen": 0, "created": 0, "skipped": 0}
 
-    async with async_session() as session:
+    async with db_client.async_session() as session:
         result = await session.execute(select(OrganizationModel.id))
         organization_ids = [row[0] for row in result.all()]
 
@@ -63,7 +63,7 @@ async def reconcile_elevenlabs_conversations(ctx, window_hours: int | None = Non
         totals["organizations"] += 1
 
         try:
-            async with async_session() as session:
+            async with db_client.async_session() as session:
                 counts = await reconcile_organization(
                     session, client, organization_id, window=window
                 )

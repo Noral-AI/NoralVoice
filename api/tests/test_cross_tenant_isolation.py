@@ -189,3 +189,52 @@ def test_credential_lookup_is_always_given_an_organization():
     assert (
         signature.parameters["organization_id"].default is inspect.Parameter.empty
     )
+
+
+# ---------------------------------------------------------------------------
+# Session factory
+#
+# Added after a production failure: the new modules imported `async_session`
+# from api/db/database.py, which is built with the *sync* sessionmaker. Every
+# `async with` against it raised TypeError at runtime. Mocked-session tests
+# could not catch this — they replace the very object that was wrong — so this
+# asserts the type instead of the behaviour.
+# ---------------------------------------------------------------------------
+
+
+def test_modules_use_an_async_session_factory():
+    """`sessionmaker` and `async_sessionmaker` are indistinguishable at call
+    time and differ only when entered as a context manager. Assert the type."""
+    from sqlalchemy.ext.asyncio import async_sessionmaker
+
+    from api.db import db_client
+
+    assert isinstance(db_client.async_session, async_sessionmaker), (
+        "db_client.async_session must be an async_sessionmaker; a plain "
+        "sessionmaker fails only at runtime, inside `async with`."
+    )
+
+
+def test_no_module_imports_the_sync_session_factory():
+    """api/db/database.py exposes a sync sessionmaker named `async_session`,
+    which reads as safe and is not. Nothing may import it."""
+    import ast
+    import inspect
+    from pathlib import Path
+
+    api_root = Path(inspect.getfile(__import__("api.db", fromlist=["x"]))).parent.parent
+
+    offenders = []
+    for source_file in list((api_root / "routes").glob("*.py")) + list(
+        (api_root / "tasks").glob("*.py")
+    ) + list((api_root / "services").rglob("*.py")):
+        tree = ast.parse(source_file.read_text())
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module == "api.db.database":
+                if any(alias.name == "async_session" for alias in node.names):
+                    offenders.append(source_file.name)
+
+    assert not offenders, (
+        f"{offenders} import async_session from api.db.database, which is a "
+        "sync sessionmaker. Use db_client.async_session instead."
+    )

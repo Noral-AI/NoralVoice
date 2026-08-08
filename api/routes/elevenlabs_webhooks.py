@@ -25,7 +25,7 @@ from typing import Any
 from fastapi import APIRouter, Request, Response, status
 from loguru import logger
 
-from api.db.database import async_session
+from api.db import db_client
 from api.services.elevenlabs import (
     MissingCredentialError,
     get_client_for_organization,
@@ -79,7 +79,7 @@ async def post_call_webhook(request: Request) -> Response:
         logger.debug(f"Ignoring ElevenLabs webhook of type {event_type}")
         return Response(status_code=status.HTTP_200_OK)
 
-    async with async_session() as session:
+    async with db_client.async_session() as session:
         # Resolved up front rather than read back off the run, because the run
         # carries a workflow_id and the recording fetch needs the organization
         # to resolve a credential and to build the per-client storage prefix.
@@ -143,7 +143,7 @@ async def conversation_initiation_webhook(request: Request) -> dict[str, Any]:
     called_number = payload.get("called_number")
 
     try:
-        async with async_session() as session:
+        async with db_client.async_session() as session:
             organization_id = (
                 await resolve_organization_for_agent(session, agent_id)
                 if agent_id
