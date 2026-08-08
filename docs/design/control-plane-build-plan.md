@@ -29,7 +29,7 @@ v2 was reviewed adversarially; 21 findings resulted. All are closed here.
 |---|---|
 | **C1** No capability-parity check | **Done, with data** (§4). Live Synthflow inventory pulled: 3 integrations, 159 actions, 14 client subaccounts. Gap list in §4.3. |
 | **C2** Gate fires after the money is spent | New **Phase 0.6 spike** before any build. Phase 3 gate is now a purpose-built reference agent (§7 Phase 3) exercising all five action types, then the hardest real client. |
-| **C3** Single-workspace MVP is theater | **Removed.** Workspace-per-client from day one, mirroring the 14 existing subaccounts (§5). |
+| **C3** Single-workspace MVP is theater | **Fixed by building the controls for real, not by adding a workspace.** Consolidated billing turned out to be Enterprise-only and we are not on Enterprise, so workspace-per-client is unavailable. The isolation controls are built properly regardless, the vendor-side blast radius is documented rather than hand-waved, and the move to workspace-per-client later is a data change (§5). |
 | **H1** Encryption justified with wrong threat model | **Corrected with the runbook** (§10.1). The 5/17 attack was RCE *inside the postgres container*; the encryption key lives in the api container. Encryption would have defeated it. |
 | **H2** No cost model | **Dropped** — vendor decision is made and not cost-contingent. Phase 6 rollups still surface margin. |
 | **H3** No behavioral regression testing | Baseline-capture / replay / diff per agent, keyed on extractor identifiers (§8). |
@@ -102,26 +102,42 @@ Census over 150 of 159 actions (pages 1–3; the tail does not introduce new typ
 
 ---
 
-## 5. Tenancy — workspace-per-client from day one
+## 5. Tenancy — one workspace, isolation controls built for real
 
-C3 is closed by removing the single-workspace MVP entirely. It was a false economy: it made the per-org credential design decorative and commingled every client's agents, numbers, conversations and recordings behind one key.
+### 5.1 The constraint
 
-**Target state, matching the existing Synthflow structure:**
+Verified against ElevenLabs documentation: multi-seat workspaces exist on Scale, Business and Enterprise, but **consolidated billing — linking multiple workspaces under one billing account with a shared credit pool and a single invoice — is Enterprise-only** and requires a CSM to enable.
 
-- One ElevenLabs workspace per client, mirroring the 14 subaccounts already in use: Ethos Residential Services, Affordable Solar, MET Marketing, I-DIEM, Allure, Aspire Medspa, Academy Prep, Energy Harbor, The Trench Academy, John A Williams, Southern States Roofing, Hometown Roofing, TBRS, Florida Made Tiny Homes.
-- One `organizations` row per client, carrying `elevenlabs_workspace_id`.
-- One encrypted credential per client (§10), holding **that workspace's** key. No shared key exists anywhere in the system.
-- All workspaces linked under Consolidated Billing for a single invoice and per-workspace usage caps.
+We are not on Enterprise. Multiple standalone workspaces would therefore mean 14 separate subscriptions with 14 non-shareable credit pools — more expensive than one pooled plan, with credit stranded per client. **Decision (2026-08-08): single workspace.**
 
-**This requires ElevenLabs Enterprise / Consolidated Billing.** It is a hard prerequisite, not a nice-to-have — it is confirmed in Phase 0.6 before Phase 1b builds against it (§12).
+### 5.2 What C3 actually demanded
 
-**Enforcement, three layers:**
+The red-team objection was never "you must have N workspaces." It was that v2 *claimed* per-client isolation while shipping a design where every org's credential held the same key — isolation theater. The fix is to build every control properly and be explicit about the one residual we cannot close on this tier.
 
-1. Every DB query is organization-scoped — no endpoint accepts a client identifier the caller doesn't own.
-2. Every ElevenLabs call resolves its credential from the calling organization. No module-level client, no ambient key, no default workspace.
-3. An automated test asserts cross-tenant denial on every route (Phase 7), run in CI.
+**Built for real, from day one:**
 
-Seven of the 14 subaccounts have Twilio active; telephony config varies per client and is captured per-client in Phase 0.6.
+1. **Per-organization credential rows** (§10) — one row per client, encrypted. Today they resolve to the same workspace key; the resolution path never assumes that.
+2. **No ambient credential anywhere.** No module-level client, no default workspace, no environment fallback. Every ElevenLabs call resolves its key from the calling organization or fails.
+3. **Mandatory org-scoping** on every query. No endpoint accepts a client identifier the caller doesn't own.
+4. **Cross-tenant denial test in CI** (Phase 7), asserted per route.
+5. **Per-client MinIO prefixes** for recordings.
+6. **Our Postgres is the isolated system of record** — the copy that reporting, billing and client access read from is properly partitioned even while the vendor's is not.
+
+### 5.3 The residual, stated plainly
+
+With one workspace, all clients' agents, phone numbers, conversations and recordings are **commingled on the ElevenLabs side behind a single key**. Anyone holding that key — our staff, a leaked CI secret, an attacker — can see every client's call data. Our controls do not change that; they bound what our *own* application will serve.
+
+This matters more than average here because of the §6 portfolio: a medspa, a school, a housing authority, consumer-credit qualification. Consequences:
+
+- **Phase 0.6 must check ElevenLabs' retention and privacy controls** — zero-retention or reduced-retention modes, and what is stored vendor-side at all — since minimising vendor-held data is the main lever we still have.
+- Treat the workspace key as the highest-value secret in the system. It is one credential away from total portfolio disclosure.
+- Revisit before onboarding any client with a contractual isolation requirement.
+
+### 5.4 Forward path
+
+`organizations.elevenlabs_workspace_id` is populated from day one, and every credential lookup already goes through the per-org path. Moving to workspace-per-client — on Enterprise, or by standing up separate subscriptions for specific clients — becomes **a data change: write a new workspace id and a new key on that org's row.** No code change. Regulated clients can be moved individually without waiting for the whole portfolio.
+
+The 14 existing Synthflow subaccounts (Ethos Residential Services, Affordable Solar, MET Marketing, I-DIEM, Allure, Aspire Medspa, Academy Prep, Energy Harbor, The Trench Academy, John A Williams, Southern States Roofing, Hometown Roofing, TBRS, Florida Made Tiny Homes) map one-to-one to `organizations` rows regardless of how many ElevenLabs workspaces sit behind them. Seven have Twilio active; per-client telephony config is captured in Phase 0.6.
 
 ---
 
@@ -138,6 +154,8 @@ The inventory turned M6 from a hypothetical into a live issue. The portfolio inc
 | `campaign_*` actions | Election-day calling — TCPA plus state robocall regimes. |
 | `info_extractor_ccnumber` | Credit-card last-4 captured into transcripts we are about to store. |
 | DNC handling (`info_extractor_dnd`) | Do-not-call capture exists as an extractor; its downstream enforcement must survive migration. |
+
+Compounding this: with a single shared workspace (§5.3), every one of these clients' recordings and transcripts sits behind one vendor key. The compliance questions below are therefore about the portfolio, not just the individual client being migrated.
 
 **Required before Phase 4 migrates any of these clients:**
 
@@ -165,12 +183,12 @@ Shelved at `312c0e0`; tree clean on `feat/control-plane-phase-0`; conflict dupli
 Closes C1/C2/M1/M4 and de-risks everything after it. Read-only against both platforms.
 
 1. **Verify ElevenLabs feature mapping** against live API docs for each row of §4.3 — especially whether conversational flows/graphs exist (M1), transfer semantics, pre-call variable population, and data-collection expressiveness.
-2. **Confirm Enterprise / Consolidated Billing** and workspace-per-client availability (§5). Blocks Phase 1b.
+2. **Check ElevenLabs retention and privacy controls** (§5.3) — zero/reduced-retention modes, what conversation data is stored vendor-side, and any per-agent privacy settings. With one shared workspace this is the main lever for limiting vendor-held client data, and it feeds the §6 compliance answers.
 3. **Prototype the two real gaps** end-to-end in n8n: Cal.com booking (slots/days/timezone) and SMS opt-in. These are the only capabilities with no native counterpart.
 4. **Reliability baseline** from `workflow_runs` — noting `WorkflowRunState` has no failure state (`api/enums.py:66`), so use initialized-never-completed as the proxy and document the method.
 5. **Per-agent complexity profile** for all 91 agents: action types used, extractor count, transfer targets, telephony config. Output ranks agents and **names the Phase 3 gate client**.
 
-**Acceptance:** a written gap report; a working n8n booking prototype; a stated reliability baseline; a ranked migration order; Enterprise status confirmed. **If a gap has no viable mapping, that surfaces here — before anything is built.**
+**Acceptance:** a written gap report; a working n8n booking prototype; a stated reliability baseline; a ranked migration order; retention controls documented. **If a gap has no viable mapping, that surfaces here — before anything is built.**
 
 ### Phase 1a — Credential management + encryption
 Full design in §10. Six steps: crypto module → transparent encrypt/decrypt in the credential client → schema (`provider`, `last_four`, `rotated_at`) → data migration of existing plaintext → set/rotate/revoke routes → Settings UI.
@@ -336,11 +354,11 @@ Phase 4 dominates and is the one to resource deliberately.
 
 ## 12. Open items
 
-1. **ElevenLabs Enterprise / Consolidated Billing status** — blocks Phase 1b (§5).
-2. **Verified restorable backup** — blocks the Phase 1a data migration only (§10.4).
-3. **Compliance confirmations** (§6) — block Phase 4 for the regulated clients, not the whole phase.
-4. **NoralOS plugin decision** — due at Phase 3.
-5. **Shelf branch `shelf/pre-control-plane-2026-08-08` @ `312c0e0` is local-only** — push it or accept the risk.
+1. ~~Enterprise status~~ — resolved 2026-08-08: not on Enterprise; single workspace with controls built for real (§5).
+2. ~~Shelf branch local-only~~ — resolved: pushed to `origin/shelf/pre-control-plane-2026-08-08`.
+3. **Verified restorable backup** — blocks the Phase 1a data migration step only, and is taken immediately before it, not in advance (§10.4).
+4. **Compliance confirmations** (§6) — block Phase 4 for the regulated clients, not the whole phase. Now also need to account for vendor-side commingling (§5.3).
+5. **NoralOS plugin decision** — due at Phase 3.
 6. `.claude/` was added to `.gitignore` in passing — keep or revert.
 
 ---
@@ -371,7 +389,8 @@ Reused as-is: `workflow_runs.recording_url` / `transcript_url` / `storage_backen
 - Do NOT return a secret from any read endpoint once written — `last_four` only.
 - Do NOT write a plaintext credential to the database after Phase 1a, including in a migration or fixture.
 - Do NOT run the Phase 1a data migration before a verified backup.
-- Do NOT operate a shared ElevenLabs workspace across clients (§5).
+- Do NOT let the shared workspace (§5) become a reason to skip an isolation control. Org-scoping, per-org credential rows, and the cross-tenant test are mandatory *because* the vendor side is commingled, not optional despite it.
+- Do NOT introduce an ambient ElevenLabs credential — no module-level client, no default workspace, no env fallback. Every call resolves from the calling organization or fails.
 - Do NOT migrate a regulated client (§6) before the compliance confirmations land.
 - Do NOT cut a number over without a written rollback for that client.
 - Do NOT begin Phase 5 before the 7-day soak and an explicit go-ahead.
