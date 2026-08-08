@@ -229,7 +229,13 @@ def _require_organization(user: UserModel) -> int:
     return user.selected_organization_id
 
 
-@router.get("/providers/{provider}")
+@router.get(
+    "/providers/{provider}",
+    **sdk_expose(
+        method="get_provider_credential",
+        description="Report whether a provider credential is installed. Never returns the secret.",
+    ),
+)
 async def get_provider_credential(
     provider: str,
     user: UserModel = Depends(get_user),
@@ -257,7 +263,13 @@ async def get_provider_credential(
     )
 
 
-@router.put("/providers/{provider}")
+@router.put(
+    "/providers/{provider}",
+    **sdk_expose(
+        method="set_provider_credential",
+        description="Install or rotate the secret for a provider.",
+    ),
+)
 async def set_provider_credential(
     provider: str,
     request: SetProviderCredentialRequest,
@@ -292,7 +304,14 @@ async def set_provider_credential(
     )
 
 
-@router.delete("/providers/{provider}", status_code=204)
+@router.delete(
+    "/providers/{provider}",
+    status_code=204,
+    **sdk_expose(
+        method="revoke_provider_credential",
+        description="Revoke the active credential for a provider.",
+    ),
+)
 async def revoke_provider_credential(
     provider: str,
     user: UserModel = Depends(get_user),

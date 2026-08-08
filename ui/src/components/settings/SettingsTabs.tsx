@@ -14,11 +14,13 @@ import PlatformTab from "./tabs/PlatformTab";
 import ProfileTab from "./tabs/ProfileTab";
 import TelephonyTab from "./tabs/TelephonyTab";
 import UsageTab from "./tabs/UsageTab";
+import VoiceProviderTab from "./tabs/VoiceProviderTab";
 import WebhookAuthTab from "./tabs/WebhookAuthTab";
 
 type TabId =
   | "profile"
   | "organization"
+  | "voice-provider"
   | "telephony"
   | "models"
   | "webhook-auth"
@@ -30,6 +32,7 @@ type TabId =
 const ALL_TABS: ReadonlyArray<{ id: TabId; label: string }> = [
   { id: "profile", label: "Profile" },
   { id: "organization", label: "Organization" },
+  { id: "voice-provider", label: "Voice provider" },
   { id: "telephony", label: "Telephony" },
   { id: "models", label: "Models" },
   { id: "webhook-auth", label: "Webhook auth" },
@@ -113,6 +116,8 @@ function renderTab(id: TabId) {
       return <ProfileTab />;
     case "organization":
       return <OrganizationTab />;
+    case "voice-provider":
+      return <VoiceProviderTab />;
     case "telephony":
       return <TelephonyTab />;
     case "models":

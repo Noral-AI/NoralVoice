@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from api.constants import DEFAULT_CAMPAIGN_RETRY_CONFIG, DEFAULT_ORG_CONCURRENCY_LIMIT
 from api.db import db_client
 from api.db.models import UserModel
+from api.db.organization_configuration_client import unseal_configuration_value
 from api.db.telephony_configuration_client import TelephonyConfigurationInUseError
 from api.enums import OrganizationConfigurationKey, PostHogEvent
 from api.sdk_expose import sdk_expose
@@ -819,12 +820,18 @@ async def save_langfuse_credentials(
         "secret_key": request.secret_key,
     }
 
-    # Preserve masked fields
-    if existing_config and existing_config.value:
-        if is_mask_of(request.public_key, existing_config.value.get("public_key", "")):
-            config_value["public_key"] = existing_config.value["public_key"]
-        if is_mask_of(request.secret_key, existing_config.value.get("secret_key", "")):
-            config_value["secret_key"] = existing_config.value["secret_key"]
+    # Preserve masked fields. Read through unseal_configuration_value rather
+    # than off the column: LANGFUSE_CREDENTIALS is a secret-bearing key, so a
+    # stored row is ciphertext and .get("public_key") on it would return the
+    # default — silently overwriting a real key with its own mask.
+    existing_value = (
+        unseal_configuration_value(existing_config.value) if existing_config else None
+    )
+    if existing_value:
+        if is_mask_of(request.public_key, existing_value.get("public_key", "")):
+            config_value["public_key"] = existing_value["public_key"]
+        if is_mask_of(request.secret_key, existing_value.get("secret_key", "")):
+            config_value["secret_key"] = existing_value["secret_key"]
 
     await db_client.upsert_configuration(
         user.selected_organization_id,

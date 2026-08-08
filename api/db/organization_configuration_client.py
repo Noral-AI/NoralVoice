@@ -4,6 +4,40 @@ from sqlalchemy.future import select
 
 from api.db.base_client import BaseDBClient
 from api.db.models import OrganizationConfigurationModel
+from api.enums import OrganizationConfigurationKey
+from api.services.crypto import seal_credential_data, unseal_credential_data
+
+#: Keys whose value carries credential material and must be encrypted at rest.
+#:
+#: This is selective rather than blanket because the table is a general-purpose
+#: key/value store: disposition mappings and call limits are not secrets, and
+#: sealing them would mean decrypting every row on every scan while making the
+#: values opaque to any query that inspects them.
+SECRET_BEARING_KEYS: frozenset[str] = frozenset(
+    {
+        OrganizationConfigurationKey.TELEPHONY_CONFIGURATION.value,
+        OrganizationConfigurationKey.TWILIO_CONFIGURATION.value,
+        OrganizationConfigurationKey.LANGFUSE_CREDENTIALS.value,
+    }
+)
+
+
+def _seal_if_secret(key: str, value: Any) -> Any:
+    """Seal a configuration value if its key carries credential material."""
+    if key in SECRET_BEARING_KEYS and isinstance(value, dict):
+        return seal_credential_data(value)
+    return value
+
+
+def unseal_configuration_value(value: Any) -> Any:
+    """Return a configuration value in the clear, sealed or not.
+
+    Safe to call on every value regardless of key: non-sealed values pass
+    through untouched, so callers do not have to know which keys are secrets.
+    """
+    if isinstance(value, dict):
+        return unseal_credential_data(value)
+    return value
 
 
 class OrganizationConfigurationClient(BaseDBClient):
@@ -35,7 +69,14 @@ class OrganizationConfigurationClient(BaseDBClient):
     async def upsert_configuration(
         self, organization_id: int, key: str, value: Any
     ) -> OrganizationConfigurationModel:
-        """Create or update a configuration for an organization."""
+        """Create or update a configuration for an organization.
+
+        Values under a secret-bearing key are sealed before they reach the
+        database; everything else is stored as-is. See SECRET_BEARING_KEYS for
+        why this is selective rather than blanket.
+        """
+        value = _seal_if_secret(key, value)
+
         async with self.async_session() as session:
             # First try to get existing configuration
             result = await session.execute(
@@ -93,7 +134,7 @@ class OrganizationConfigurationClient(BaseDBClient):
     ) -> Any:
         """Get the value of a configuration, returning default if not found."""
         config = await self.get_configuration(organization_id, key)
-        return config.value if config else default
+        return unseal_configuration_value(config.value) if config else default
 
     async def get_all_configurations_by_key(self, key: str) -> list[dict[str, Any]]:
         """Get all organization configurations for a given key.
@@ -109,7 +150,7 @@ class OrganizationConfigurationClient(BaseDBClient):
             return [
                 {
                     "organization_id": config.organization_id,
-                    "value": config.value,
+                    "value": unseal_configuration_value(config.value),
                 }
                 for config in result.scalars().all()
                 if config.value
@@ -130,11 +171,17 @@ class OrganizationConfigurationClient(BaseDBClient):
             )
             configs = result.scalars().all()
 
-            return [
-                {
-                    "organization_id": config.organization_id,
-                    "value": config.value,
-                }
+            # Unsealed before the provider test, not after: a sealed value has
+            # no "provider" key of its own, so filtering on the raw column
+            # would silently match nothing once these rows are encrypted.
+            unsealed = (
+                (config.organization_id, unseal_configuration_value(config.value))
                 for config in configs
-                if config.value and config.value.get("provider") == provider
+                if config.value
+            )
+
+            return [
+                {"organization_id": organization_id, "value": value}
+                for organization_id, value in unsealed
+                if isinstance(value, dict) and value.get("provider") == provider
             ]

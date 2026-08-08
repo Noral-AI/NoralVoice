@@ -8,6 +8,7 @@ from sqlalchemy.future import select
 from api.db.base_client import BaseDBClient
 from api.db.models import UserConfigurationModel, UserModel
 from api.schemas.user_configuration import UserConfiguration
+from api.services.crypto import seal_credential_data, unseal_credential_data
 
 
 class UserClient(BaseDBClient):
@@ -78,7 +79,11 @@ class UserClient(BaseDBClient):
             try:
                 return UserConfiguration.model_validate(
                     {
-                        **configuration_obj.configuration,
+                        # This document holds the user's LLM/TTS/STT provider
+                        # keys. Sealed rows decrypt here; rows written before
+                        # encryption existed pass through unchanged, so this
+                        # works against a part-migrated table.
+                        **unseal_credential_data(configuration_obj.configuration),
                         "last_validated_at": configuration_obj.last_validated_at,
                     }
                 )
@@ -101,20 +106,27 @@ class UserClient(BaseDBClient):
                 )
             )
             configuration_obj = result.scalars().first()
+            # Serialise once, then seal. The plaintext document is what we
+            # validate and return; only the sealed copy reaches the database.
+            plaintext = configuration.model_dump()
+            sealed = seal_credential_data(plaintext)
+
             if not configuration_obj:
                 configuration_obj = UserConfigurationModel(
-                    user_id=user_id, configuration=configuration.model_dump()
+                    user_id=user_id, configuration=sealed
                 )
                 session.add(configuration_obj)
             else:
-                configuration_obj.configuration = configuration.model_dump()
+                configuration_obj.configuration = sealed
             try:
                 await session.commit()
             except Exception as e:
                 await session.rollback()
                 raise e
             await session.refresh(configuration_obj)
-        return UserConfiguration.model_validate(configuration_obj.configuration)
+        # Validated from the plaintext we just wrote rather than from the
+        # refreshed column, which is now ciphertext.
+        return UserConfiguration.model_validate(plaintext)
 
     async def update_user_configuration_last_validated_at(self, user_id: int) -> None:
         async with self.async_session() as session:
