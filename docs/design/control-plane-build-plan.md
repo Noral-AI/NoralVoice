@@ -36,6 +36,8 @@ We manage voice agents for clients. We do not want to run a real-time voice pipe
 | 5 | (silent on Synthflow) | **Vendor decision is a hard gate before Phase 1** (§3) | 91 agents / 14 subaccounts already run on a managed platform of exactly this shape. |
 | 6 | (silent) | **Phase 0.5: working-tree hygiene** | 13 uncommitted files, untracked features, ~12 cloud-sync conflict duplicates. Not safe to start deleting on top of that. |
 | 7 | Acceptance = "app boots, tests green" | Acceptance = **a real inbound + outbound call, from a real client number, appearing in our dashboard** | Booting proves nothing about a voice product. |
+| 8 | "Provider keys live in env / a secrets store" | **The API key is entered and rotated in the platform UI**, stored encrypted in the DB. Only the encryption key lives in env | Operator requirement. Keys must be manageable per client without a redeploy. |
+| 9 | "Encrypted per-client credential storage" as a Phase 2 bullet | **Its own phase (1a), gating everything else** | There is no encryption in this codebase at all (§11.1). On today's storage, moving keys from env into Postgres would be a downgrade, not an upgrade. |
 
 Everything else from v1 — mission, prime directive, tenancy model, the Do-NOT list — carries over intact.
 
@@ -88,7 +90,7 @@ One additive migration in Phase 1; drops deferred to Phase 5.
 | Table | Add |
 |---|---|
 | `organizations` | `name`, `status`, `vendor_workspace_id` |
-| `external_credentials` | vendor API-key credential type; verify encryption at rest |
+| `external_credentials` | `provider`, `last_four`, `rotated_at`; `credential_data` becomes encrypted (§11) |
 | `workflows` | `vendor_agent_id`, `vendor_current_version` |
 | `telephony_phone_numbers` | `vendor_phone_number_id` |
 | `workflow_runs` | `vendor_conversation_id` (**unique** — webhook idempotency key), `duration_seconds`, `sentiment`, `transcript` (JSONB) |
@@ -126,14 +128,30 @@ Deliverable: [control-plane-phase-0-recon.md](./control-plane-phase-0-recon.md).
 
 ---
 
-### Phase 1 — Vendor client + tenancy *(was Phase 2)*
+### Phase 1a — Credential management + encryption at rest *(new; blocks 1b)*
+**Purely additive. Engine untouched. Prod unaffected.** Full design in §11.
+
+The ElevenLabs key is entered and rotated **in the platform UI**, never in code and never in env. That requires encryption at rest to exist first — see the finding in §11.1, which is why this is its own phase rather than a bullet under 1b.
+
+1. **Crypto module** (`api/services/crypto/`) — libsodium `SecretBox` envelope encryption, versioned `v1:` format, key from `CREDENTIAL_ENCRYPTION_KEY`. No new dependency: PyNaCl is already in `api/requirements.txt:21`.
+2. **Transparent encrypt/decrypt** in `WebhookCredentialClient` so no callsite handles ciphertext directly.
+3. **Schema**: add `provider`, `last_four`, `rotated_at` to `external_credentials`; add `ELEVENLABS` to the provider set. Chains off alembic head `e4a2b9d3f715` (§11.5).
+4. **Data migration**: encrypt existing plaintext rows in `external_credentials` and the LLM/TTS keys in `user_configurations` / `organization_configurations`. Idempotent, reversible, backup first (§11.4).
+5. **Routes**: set / rotate / revoke a provider credential. No read endpoint ever returns the secret — only `provider`, `last_four`, `rotated_at`.
+6. **UI**: ElevenLabs section in Settings following the existing `WebhookAuthTab` pattern. Paste to set; thereafter shows `…last4` with rotate and revoke.
+
+**Acceptance:** key entered through the UI and used to make a live authenticated ElevenLabs call; `SELECT credential_data FROM external_credentials` shows ciphertext for every row; no secret in any API response or log line; unit tests cover round trip, legacy-plaintext pass-through, missing/malformed key, tampered ciphertext, and key mismatch; existing suite green.
+
+---
+
+### Phase 1b — ElevenLabs client + tenancy *(was Phase 2)*
 **Purely additive. Engine untouched. Prod unaffected.**
 
-- `api/services/<vendor>/` — one typed client covering: agents (create/get/list/update/duplicate, drafts/versions/publish), knowledge base (create from file/url/text, list, delete, index), tools (webhook/client/MCP + system tools: transfer-to-number, voicemail detection, end-call), phone numbers (import Twilio, list, assign, outbound call, batch calling), conversations (list, get, transcript, audio, signed URL, analysis), workspace (secrets, env vars).
-- Additive migration per §5. Encrypted per-client credential storage; keys in env/secret store, never in repo or logs.
-- Tenant-scoped credential resolution: every vendor call routes through the calling org's credential.
+- `api/services/elevenlabs/` — one typed client covering: agents (create/get/list/update/duplicate, drafts/versions/publish), knowledge base (create from file/url/text, list, delete, index), tools (webhook/client/MCP + system tools: transfer-to-number, voicemail detection, end-call), phone numbers (import Twilio, list, assign, outbound call, batch calling), conversations (list, get, transcript, audio, signed URL, analysis), workspace (secrets, env vars).
+- Additive migration per §5.
+- Tenant-scoped credential resolution: every ElevenLabs call resolves the calling org's credential through Phase 1a. No global client, no module-level key.
 
-**Acceptance:** list a real client's agents from a real vendor workspace through our API; credentials encrypted at rest and absent from logs; unit tests against a mocked vendor client; existing test suite still green; **prod still serving calls on the engine**.
+**Acceptance:** list a real client's agents from a real ElevenLabs workspace through our API; unit tests against a mocked client; existing test suite still green; **prod still serving calls on the engine**.
 
 ---
 
@@ -212,6 +230,10 @@ Dead config removal, `README`, `deploy/noral` refreshed for the slim stack, CI u
 
 - Do NOT reintroduce any real-time media path (Pipecat, WebRTC, coturn, audio streaming, turn detection).
 - Do NOT store provider API keys or Twilio tokens in the repo, logs, or client-side code.
+- Do NOT hardcode the ElevenLabs key in env, code, or config. It is entered in the platform UI and stored encrypted (§11). The **only** credential in env is `CREDENTIAL_ENCRYPTION_KEY`.
+- Do NOT return a secret from any read endpoint once written — `last_four` only.
+- Do NOT write a plaintext credential to the database after Phase 1a lands, including in a migration or a fixture.
+- Do NOT run the Phase 1a data migration before a verified backup exists.
 - Do NOT return or render data across client boundaries anywhere.
 - Do NOT preserve upstream Dograh compatibility at the cost of keeping engine code.
 - Do NOT expand scope into "just a small" custom voice feature — use the vendor's BYO-LLM hook.
@@ -228,7 +250,85 @@ A Noral operator logs in, picks a client, creates/edits/publishes that client's 
 
 ## 10. Open items
 
-1. **Vendor decision (§3)** — blocks Phase 1.
-2. **NoralOS plugin plan (§Phase 3)** — deferrable to Phase 3, not past it.
-3. Vendor API key with workspace access, supplied via env.
-4. Phase 0.5 disposition of the uncommitted working tree.
+1. ~~Vendor decision~~ — resolved: ElevenLabs (§3).
+2. ~~Phase 0.5 working-tree disposition~~ — resolved: shelved at `312c0e0`, tree clean.
+3. **NoralOS plugin plan (§Phase 3)** — deferrable to Phase 3, not past it.
+4. **Backup confirmation before the Phase 1a data migration** (§11.4) — blocks that step only.
+5. **ElevenLabs Enterprise / Consolidated Billing status** — decides whether Phase 7 wires real workspace isolation or control-plane-enforced boundaries.
+
+---
+
+## 11. Phase 1a design — credential management
+
+### 11.1 The finding that shapes this phase
+
+`grep -riE "fernet|encrypt|decrypt|cryptography"` across `api/` returns **zero hits**. There is no encryption anywhere in this codebase. Meanwhile `api/db/models.py` carries this on `external_credentials`:
+
+```python
+# Encrypted credential data (JSON)
+credential_data = Column(JSON, nullable=False, default=dict)
+```
+
+The comment is false. Those credentials are plaintext. So are the provider keys in `user_configurations.configuration` and `organization_configurations.value`, including the ElevenLabs TTS key already stored there.
+
+**Consequence for this phase:** moving the API key from env into the platform, on today's storage, would be *weaker* than the env var it replaces — env vars do not appear in `pg_dump` output, nightly backups, or replica snapshots; a plaintext JSON column appears in all three. Given the 2026-05-17 Postgres compromise, that is a demonstrated exposure path, not a theoretical one. Encryption is therefore a precondition of the requested feature, not a nice-to-have bolted on after.
+
+### 11.2 Storage location
+
+`external_credentials`, extended — not a new table.
+
+It is already organization-scoped with a public UUID, `created_by` audit, soft delete, and a unique-name-per-org constraint, and it already has a route (`api/routes/credentials.py`) and a settings tab (`WebhookAuthTab.tsx`) to model the new UI on. One credential store, not a third pattern beside `user_configurations` and `organization_configurations`.
+
+Because it is org-scoped, the ElevenLabs credential is **already the per-client credential** Phase 1b and Phase 7 need. No global key to unpick later.
+
+| Column | Status | Purpose |
+|---|---|---|
+| `organization_id`, `credential_uuid`, `name`, `created_by`, `is_active` | exists | tenancy, audit, soft delete |
+| `credential_data` (JSON) | exists, **behaviour changes** | holds `{"__enc__": "v1:…"}` once encrypted |
+| `provider` | **add** | `elevenlabs`; NULL for webhook credentials |
+| `last_four` | **add** | UI display without decrypting |
+| `rotated_at` | **add** | rotation audit |
+
+### 11.3 Envelope format
+
+Ciphertext is stored as a self-describing string:
+
+```
+v1:<urlsafe-base64( 24-byte nonce || ciphertext || Poly1305 MAC )>
+```
+
+- **Algorithm:** libsodium `SecretBox` (XSalsa20-Poly1305) via PyNaCl — already a direct dependency, so no new package. Authenticated, so tampering fails loudly instead of yielding garbage.
+- **Nonce:** random per encryption. Equal secrets must not produce equal ciphertext, or the database leaks which organizations share a key.
+- **Whole-document encryption:** the entire `credential_data` JSON is encrypted as one envelope rather than selected fields, so a sensitive field added later cannot be left in the clear by omission.
+- **The `v1:` prefix** does two jobs: it lets reads distinguish an encrypted value from a legacy plaintext one with no schema flag — which is what keeps existing rows working during migration — and it leaves room for `v2:` on key or algorithm rotation.
+
+**Key management.** One 32-byte key, base64-encoded, in `CREDENTIAL_ENCRYPTION_KEY`. This is the one secret that legitimately belongs in the environment: it carries no credential itself, and it is precisely what allows every *actual* credential to live in the database under operator control. Losing it makes existing ciphertext unrecoverable and credentials must be re-entered — back it up with the other deploy secrets.
+
+Reads of legacy plaintext must work **without** a key configured, otherwise deploying this would break every existing installation at startup.
+
+### 11.4 Data migration — the part that touches live data
+
+Existing plaintext credentials get encrypted in place. This is the only step in Phase 1a that writes to production rows, so it is fenced:
+
+1. **Backup first**, verified restorable. This step does not start until that is confirmed (open item §10.4).
+2. **Idempotent** — guarded on `is_encrypted()`, so a re-run is a no-op and a partial failure is resumable.
+3. **Reversible** — a downgrade path decrypts back to plaintext, so a rollback does not strand the deployment.
+4. **Scope:** `external_credentials.credential_data`, plus the LLM/TTS keys nested in `user_configurations.configuration` and `organization_configurations.value`.
+5. **Verification:** row counts before and after, and a spot decrypt of each affected table proving plaintext round-trips.
+
+Risk being managed: those LLM keys are serving production calls right now. A bad migration is an outage. Hence backup, idempotence, and a downgrade path rather than a one-way script.
+
+### 11.5 Alembic
+
+Single head: **`e4a2b9d3f715`** (`20260526_add_api_key_plaintext.py`), confirmed with `alembic heads` against the test database. An earlier static scan of this repo suggested four heads; that was wrong — it missed revisions whose `down_revision` is a tuple. No merge revision is needed; Phase 1a chains one schema migration and one data migration off that head.
+
+### 11.6 Exposure rules
+
+- No endpoint returns a secret after it is written — reads expose `provider`, `name`, `last_four`, `rotated_at` only.
+- No secret, ciphertext, or key material in any log line, including exception messages. Decryption errors name the failure mode, never the value.
+- Secrets never reach the client bundle, URL parameters, or query strings.
+- `CREDENTIAL_ENCRYPTION_KEY` is never committed, never logged, never returned by an endpoint.
+
+### 11.7 What this does not cover
+
+Application-level encryption protects database dumps, backups, and replicas. It does **not** protect against an attacker with live application memory or the ability to call the app's own decrypt path — that requires a KMS or HSM holding the key outside the process, which is out of scope here and worth revisiting if a regulated client is onboarded (see §7 tenancy note).
