@@ -10,7 +10,7 @@ Read-only against both platforms. **No product code is written in this phase.**
 | 3 | Prototype Cal.com booking in n8n | ⬜ |
 | 4 | Prototype SMS opt-in in n8n | ⬜ |
 | 5 | Reliability baseline from `workflow_runs` | ⬜ |
-| 6 | Per-agent complexity profile (91 agents) → ranked order + gate client | ⬜ |
+| 6 | Per-agent complexity profile (91 agents) → ranked order + gate client | ✅ 2026-08-08 |
 | 7 | Set BYO-LLM p95 latency budget | ⬜ |
 
 ---
@@ -156,3 +156,127 @@ WebFetch elevenlabs.io/docs/eleven-agents/legal/hipaa
 WebFetch elevenlabs.io/docs/agents-platform/workflows/post-call-webhooks
 WebFetch elevenlabs.io/docs/overview/administration/data-residency
 ```
+
+---
+
+## 3. Per-agent complexity profile
+
+Pulled read-only from the Synthflow MCP on 2026-08-08. **This task changes the shape of Phase 4 more than anything else in the spike.** The headline number "91 agents" is real, and it is not the migration workload.
+
+### 3.1 Only 13 of 91 agents have a phone number
+
+There are exactly **14 phone numbers in the entire account**. Every one sits in the parent workspace.
+
+| | Count |
+|---|---|
+| Agents total | **91** |
+| Agents with a phone number | **13** |
+| Agents with no number at all | **78** |
+| Phone numbers in the account | **14** |
+
+An agent with no number cannot take an inbound call. The 78 are demos, pitches and abandoned builds, and the names say so plainly: *Tampa Bay Rays*, *BMW of Sarasota*, *FEMA*, *Central Bank*, *Regal Kia*, *USF Health – Pharmacy*, *Kamala Harris*, *My Inbound Assistant*, *Doctor's office*.
+
+Plan §11 calls Phase 4 "the long pole — weeks, 91 agents × baseline, recreate, diff, cutover, monitor." **That estimate is built on a population roughly seven times larger than the one that actually carries traffic.** The real cutover workload is thirteen agents, of which several are explicitly test builds. Phase 4 should be re-scoped around the live cohort, with a separate, much cheaper decision about what to do with the 78 — most plausibly "do not migrate; archive."
+
+**Before acting on this, confirm the numbers are the whole story.** An agent could plausibly be driven by outbound API without owning a number. That is worth one query against call history per agent before anything is archived — cheap, and it converts this from a strong inference into a fact.
+
+### 3.2 The live cohort, profiled
+
+Actions counted per agent via `get_agent_actions`. "Extractors" counts `info_extractor_*` items — the ones that consume the 25-item data-collection budget (§1.2).
+
+| Agent | Type | Number | Actions | Notes |
+|---|---|---|---|---|
+| **THA Parking – Sophia** | inbound | +18138197187 | **17** | Most complex live agent. Transfers to +18133419109. Has `preferred_language`. |
+| **THA – Danielle** | inbound | +18138197200 | **14** | Transfers to the parking line — agent-to-agent over PSTN. SMS opt-in with TCPA language. |
+| **Ice Machine – Michelle** | inbound | +18132127608 | **11** | Refund flow. **Carries `info_extractor_ccnumber`** — see §3.5. |
+| Appointment Setter – FL Tiny Homes | inbound | +18135131598 | 5 | Booking + email + reason-for-call. |
+| THA – OB Request Routing | outbound | +18132957551 | 1 | Single action: **`calendly_availability`** — see §3.6. |
+| Heal Pros | inbound | +18139023777 | **0** | Live number, no actions. |
+| Cedric's Personal Assistant | inbound | +18137615700 | **0** | Live number, no actions. |
+| THA – Tenant Callback | outbound | +18138197200 | — | Shares the main THA number. |
+| V2 – Testing – THA – Danielle | inbound | +18137337900 | — | Test build on a real number. |
+| TESTING – THA Parking – Sophia | inbound | +18134991920 | — | Test build on a real number. |
+| Hailey | outbound | +18134991920 | — | Shares the test number. |
+| Demo – Jeremey | inbound | +18132957206 | — | On the number labelled "TBRS". |
+| Physician Partners DEMO | inbound | *(empty string)* | — | Number field is `""`, not null. |
+
+Sampled from the dormant 78 to bound the maximum: **Aspire Medspa — 0 actions.**
+
+### 3.3 Three findings that make the migration cheaper
+
+1. **Max extractors on any one agent is 17**, against the 25-item cap. F2's constraint is real but **not breached anywhere in the live cohort** — no agent needs splitting across workflow nodes. This was the open question §1.2 raised, and the answer is favourable. (Bounded over the live cohort plus samples, not all 91 — but the 78 dormant agents are not migration targets, and the two sampled carry zero actions.)
+2. **Extractors are a shared library, not per-agent definitions.** `info_extractor_name_egKLIhPocv`, `info_extractor_tha_property_Iqi8dWAzIm` and `info_extractor_tenant_name_gHeUi3D7SO` appear with *identical slugs* across different agents. So the 159 actions are a deduplicated pool attached many-to-many, and the §8 equivalence contract is **per slug**, defined once and reused — not 159 × per-agent work.
+3. **Several live agents have zero actions.** Heal Pros and Cedric's Personal Assistant are answering agents with nothing to extract, transfer or book. They are close to trivial to migrate and are the natural first cutover, ahead of anything complex.
+
+Confirmed in passing: `transfer_mode: "cold_transfer"` appears literally in the action definitions, and `transfer_target_type: "single_target"`. That is the blind-transfer mapping from §1.1, verified from the source side rather than inferred.
+
+### 3.4 The structural finding — subaccounts are empty
+
+**All 91 agents live in the parent workspace `1713968079252x…`. Not one lives in a client subaccount.** The 14 subaccounts exist, seven have Twilio active, and they hold no agents. `list_phone_numbers` scoped across the agency tree (`workspace_ids: ['*']`) returns **zero**; the same call scoped to the parent returns all 14 numbers.
+
+Attempting to read into a subaccount fails outright: *"workspace_id … is not accessible for this user."* The MCP credential can enumerate subaccounts but cannot read inside them.
+
+**This contradicts plan §5.4**, which states the 14 subaccounts "map one-to-one to `organizations` rows." As a description of the client list that is a reasonable starting point. As a description of where agent data lives, it is wrong — and Phase 4 would have been built expecting to walk subaccounts. In reality:
+
+- Client attribution runs through **agent naming convention**, and the convention is inconsistent — `THA - Danielle`, `Ethos Residential - Sales Consultation Agent`, `Attorney John A Williams- Holly`, bare `Aspire Medspa`, and unprefixed names like `Leverage` and `Mccants`.
+- **Mapping agents to `organizations` is therefore a manual, judgement-based exercise**, not a field copy. It needs a human-reviewed mapping table built once and checked, and it belongs in Phase 4 preparation rather than being discovered mid-cutover.
+- Several live agents map to **no subaccount at all** — Heal Pros, Ice Machine, Cedric's Personal Assistant. Either they are clients without a subaccount, or they are internal. Someone needs to say which.
+
+### 3.5 `info_extractor_ccnumber` is live, and it is not the medspa
+
+Plan §6 flagged this extractor without saying where it ran. It is on **Ice Machine – Michelle**, an agent with a live inbound number, alongside `info_extractor_cc_transaction_time` and `info_extractor_refund`. It is a **refund flow** — caller reports a bad transaction, the agent captures card digits and transaction time.
+
+So the concern is PCI-adjacent rather than HIPAA-adjacent, it is **live today**, and it predates this migration. Two things follow, and the first does not wait for the migration:
+
+- Card digits are being captured into call transcripts right now, on the current platform. That is worth someone's attention independent of anything in this plan.
+- Per capability spike §2.5 and plan §6, **this extractor does not get recreated on ElevenLabs without an explicit decision.** Migrating it as-is would put card data into a shared-workspace transcript store with a two-year default retention.
+
+### 3.6 Calendly is in use, not just Cal.com
+
+Plan §4.1 records Cal.com as the only configured integration. True at the *integration* level — but `THA - OB Request Routing` carries a `calendly_availability` action: a `custom_function_action_type` doing `GET` against the Calendly API. It is one of the four custom functions §4.2 counted, so the census is consistent; the *conclusion* drawn from it is not.
+
+**Consequence for the blocked n8n work (tasks 3–4):** the booking prototype cannot assume Cal.com. If THA migrates, the n8n booking workflow has to cover **Calendly as well** — a second API with its own availability model. That is additional scope on the capability the plan already rates "Highest" risk.
+
+### 3.7 Ranked migration order
+
+Cheapest and safest first, since the plan's own §7 Phase 4 says unregulated first and the ranking must respect S5.
+
+| Rank | Agent | Why here |
+|---|---|---|
+| 1 | **Heal Pros** | Live number, zero actions. Nothing to diff beyond "does it answer and sound right." |
+| 2 | **Cedric's Personal Assistant** | Same shape. |
+| 3 | **Appointment Setter – FL Tiny Homes** | 5 actions, maps to a real subaccount, exercises booking without regulatory weight. |
+| 4 | **Ice Machine – Michelle** | 11 actions, genuinely non-trivial — **but drop `ccnumber` first** (§3.5). |
+| 5 | **THA – OB Request Routing** | Single action, but pulls in Calendly (§3.6). **Regulated — S5.** |
+| 6 | **THA – Danielle** | 14 actions, SMS opt-in, PSTN agent-to-agent transfer. **Regulated — S5.** |
+| 7 | **THA Parking – Sophia** | 17 actions, the most complex live agent. **Regulated — S5.** |
+| — | The other 78 | **Do not migrate.** Confirm no outbound-only traffic (§3.1), then archive. |
+
+### 3.8 The gate client — the plan's design does not survive contact with the data
+
+Plan §7 Phase 3 step 2 requires the **"hardest real client, chosen by the ranking — not the easiest. Unregulated, per §6."**
+
+Those two requirements now point in opposite directions. **The hardest live client is Tampa Housing Authority by a wide margin** — it owns 6 of the 14 numbers and the three most complex live agents. THA is a housing authority, which is **explicitly S5-regulated**. Every remaining live unregulated agent is trivial: 0, 0, 5 and 11 actions.
+
+There is no live client that is both hard and unregulated. So the gate must be resolved deliberately rather than by following the rule as written:
+
+- **Recommended: `Ice Machine – Michelle` as the gate client**, with `ccnumber` dropped. It is the only live unregulated agent with real complexity — 11 extractors, a refund flow with genuine branching, and a real inbound number. It satisfies "unregulated" strictly and "hardest" as far as the data permits.
+- **The alternative is to accept THA as the gate** and pull the housing-authority compliance confirmations forward from Phase 4 to now — inverting §6's "regulated clients migrate last." Defensible, because THA *is* the portfolio, but it is a decision a human makes, not one this loop takes. **This is S5 territory and the loop will not proceed into it.**
+- Either way the **reference agent (gate step 1) is unaffected** — it is purpose-built, exercises all five action types, and belongs to no client. It remains the right first proof and this loop can build toward it.
+
+Logged as **D5**.
+
+### 3.9 Verification commands
+
+```
+list_subaccounts                      → 14 subaccounts, 7 Twilio-active, 0 agents
+list_agents (page_size 100)           → total 91, every workspace_id = parent
+list_agents (workspace_id=<Aspire>)   → error: not accessible for this user
+list_phone_numbers (workspace_ids=*)  → total 0
+list_phone_numbers (current)          → total 14
+list_actions (page_size 1)            → total 159; cold_transfer confirmed in situ
+list_actions (search "Calendly")      → 1 custom_function_action_type
+get_agent_actions × 8                 → per-agent counts in §3.2
+```
+
+Read-only throughout — `list_*` and `get_*` only, per loop prompt §1.
