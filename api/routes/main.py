@@ -3,8 +3,10 @@ from loguru import logger
 from pydantic import BaseModel
 
 from api.routes.agent_stream import router as agent_stream_router
+from api.routes.agents import router as agents_router
 from api.routes.auth import router as auth_router
 from api.routes.auth_google import router as auth_google_router
+from api.routes.calls import router as calls_router
 from api.routes.campaign import router as campaign_router
 from api.routes.credentials import router as credentials_router
 from api.routes.elevenlabs_webhooks import router as elevenlabs_webhooks_router
@@ -46,6 +48,8 @@ router.include_router(credentials_router)
 router.include_router(tool_router)
 router.include_router(integration_webhooks_router)
 router.include_router(elevenlabs_webhooks_router)
+router.include_router(agents_router)
+router.include_router(calls_router)
 router.include_router(n8n_integration_router)
 router.include_router(organization_router)
 router.include_router(s3_router)
