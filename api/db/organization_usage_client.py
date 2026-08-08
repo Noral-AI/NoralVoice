@@ -18,6 +18,7 @@ from api.db.models import (
     WorkflowRunModel,
 )
 from api.schemas.user_configuration import UserConfiguration
+from api.services.crypto import unseal_credential_data
 
 
 class OrganizationUsageClient(BaseDBClient):
@@ -451,7 +452,7 @@ class OrganizationUsageClient(BaseDBClient):
                 config_obj = config_result.scalar_one_or_none()
                 if config_obj and config_obj.configuration:
                     user_config = UserConfiguration.model_validate(
-                        config_obj.configuration
+                        unseal_credential_data(config_obj.configuration)
                     )
                     if user_config.timezone:
                         user_timezone = user_config.timezone

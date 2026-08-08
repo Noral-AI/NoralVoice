@@ -8,6 +8,8 @@ from sqlalchemy import select, update
 
 from api.db.base_client import BaseDBClient
 from api.db.models import ExternalCredentialModel
+from api.enums import WebhookCredentialType
+from api.services.crypto import last_four, seal_credential_data
 
 
 class WebhookCredentialClient(BaseDBClient):
@@ -42,7 +44,9 @@ class WebhookCredentialClient(BaseDBClient):
                 name=name,
                 description=description,
                 credential_type=credential_type,
-                credential_data=credential_data,
+                # Sealed here rather than in the route so that no caller can
+                # write a plaintext credential by forgetting to encrypt first.
+                credential_data=seal_credential_data(credential_data),
             )
 
             session.add(credential)
@@ -144,7 +148,7 @@ class WebhookCredentialClient(BaseDBClient):
             if credential_type is not None:
                 update_values["credential_type"] = credential_type
             if credential_data is not None:
-                update_values["credential_data"] = credential_data
+                update_values["credential_data"] = seal_credential_data(credential_data)
 
             await session.execute(
                 update(ExternalCredentialModel)
@@ -198,6 +202,122 @@ class WebhookCredentialClient(BaseDBClient):
                 logger.info(
                     f"Soft deleted webhook credential {credential_uuid} "
                     f"for organization {organization_id}"
+                )
+                return True
+            return False
+
+    # ------------------------------------------------------------------
+    # Provider credentials
+    #
+    # The rows above are per-organization webhook auth, addressed by UUID and
+    # created freely. A provider credential is different in kind: there is at
+    # most one per organization per provider ("elevenlabs"), it is addressed by
+    # provider name rather than UUID, and it is set/rotated/revoked rather than
+    # CRUD-ed. Same table, same encryption, different lifecycle.
+    # ------------------------------------------------------------------
+
+    async def get_provider_credential(
+        self, organization_id: int, provider: str
+    ) -> Optional[ExternalCredentialModel]:
+        """Return the active credential for a provider, or None.
+
+        Org-scoped by construction — there is no variant of this that looks up
+        a provider credential without an organization, because every
+        ElevenLabs call must resolve its key from the calling organization or
+        fail (plan §5.2).
+        """
+        async with self.async_session() as session:
+            result = await session.execute(
+                select(ExternalCredentialModel).where(
+                    ExternalCredentialModel.organization_id == organization_id,
+                    ExternalCredentialModel.provider == provider,
+                    ExternalCredentialModel.is_active.is_(True),
+                )
+            )
+            return result.scalars().first()
+
+    async def set_provider_credential(
+        self,
+        organization_id: int,
+        user_id: int,
+        provider: str,
+        secret: str,
+    ) -> ExternalCredentialModel:
+        """Install or replace the secret for a provider. Rotation is the same call.
+
+        Deactivates any existing active row for this provider before inserting,
+        rather than updating in place, so the audit trail keeps the superseded
+        row with its own created_by and timestamps.
+
+        Args:
+            secret: the raw secret. Sealed before it reaches the database; never
+                logged, and never returned by any read path.
+        """
+        async with self.async_session() as session:
+            existing = await session.execute(
+                select(ExternalCredentialModel).where(
+                    ExternalCredentialModel.organization_id == organization_id,
+                    ExternalCredentialModel.provider == provider,
+                    ExternalCredentialModel.is_active.is_(True),
+                )
+            )
+            superseded = list(existing.scalars().all())
+            now = datetime.now(UTC)
+
+            for row in superseded:
+                row.is_active = False
+                row.updated_at = now
+                session.add(row)
+
+            credential = ExternalCredentialModel(
+                organization_id=organization_id,
+                created_by=user_id,
+                # Unique per org, and stable across rotations of the same
+                # provider only because the superseded row is deactivated
+                # first — the unique constraint is on active name per org.
+                name=f"{provider} API key",
+                description=f"Managed {provider} credential",
+                credential_type=WebhookCredentialType.API_KEY.value,
+                credential_data=seal_credential_data({"api_key": secret}),
+                provider=provider,
+                last_four=last_four(secret),
+                rotated_at=now if superseded else None,
+            )
+            session.add(credential)
+            await session.commit()
+            await session.refresh(credential)
+
+            # Deliberately logs the provider and the row count, never the
+            # secret, its length, or its last four.
+            logger.info(
+                f"Set {provider} credential for organization {organization_id} "
+                f"(superseded {len(superseded)} previous)"
+            )
+            return credential
+
+    async def revoke_provider_credential(
+        self, organization_id: int, provider: str
+    ) -> bool:
+        """Soft-delete the active credential for a provider.
+
+        Returns True if something was revoked, False if there was nothing
+        active to revoke.
+        """
+        async with self.async_session() as session:
+            result = await session.execute(
+                update(ExternalCredentialModel)
+                .where(
+                    ExternalCredentialModel.organization_id == organization_id,
+                    ExternalCredentialModel.provider == provider,
+                    ExternalCredentialModel.is_active.is_(True),
+                )
+                .values(is_active=False, updated_at=datetime.now(UTC))
+            )
+            await session.commit()
+
+            if result.rowcount > 0:
+                logger.info(
+                    f"Revoked {provider} credential for organization {organization_id}"
                 )
                 return True
             return False

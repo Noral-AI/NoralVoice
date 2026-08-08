@@ -4,6 +4,7 @@ import type { Team } from "@stackframe/stack";
 import {
   AlertTriangle,
   AudioLines,
+  Bot,
   ChevronLeft,
   ChevronRight,
   Database,
@@ -12,6 +13,7 @@ import {
   LogOut,
   type LucideIcon,
   Megaphone,
+  PhoneCall,
   Settings,
   ShieldCheck,
   TrendingUp,
@@ -90,6 +92,14 @@ const NAV_SECTIONS: SidebarNavSection[] = [
     label: "BUILD",
     items: [
       {
+        // ElevenLabs-backed agents — the control plane's own authoring
+        // surface. Sits above "Voice Agents" (the legacy engine builder),
+        // which stays until the engine is retired.
+        title: "Agents",
+        url: "/agents",
+        icon: Bot,
+      },
+      {
         title: "Voice Agents",
         url: "/workflow",
         icon: Workflow,
@@ -119,6 +129,11 @@ const NAV_SECTIONS: SidebarNavSection[] = [
   {
     label: "OBSERVE",
     items: [
+      {
+        title: "Calls",
+        url: "/calls",
+        icon: PhoneCall,
+      },
       {
         title: "Agent Runs",
         url: "/settings?tab=usage-billing",

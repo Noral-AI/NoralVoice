@@ -15,6 +15,7 @@ from api.db.models import (
     WorkflowModel,
     WorkflowRunModel,
 )
+from api.enums import WorkflowStatus
 
 
 class WorkflowInUseError(Exception):
@@ -885,3 +886,108 @@ class WorkflowClient(BaseDBClient):
                     f"Failed to add disposition code '{disposition_code}' "
                     f"to workflow {workflow_id}: {e}"
                 )
+
+    # ------------------------------------------------------------------
+    # ElevenLabs-backed agents
+    #
+    # An ElevenLabs agent is represented by a workflow row so that runs,
+    # reporting and per-organization scoping all keep working unchanged.
+    # These rows carry elevenlabs_agent_id and no graph definition.
+    # ------------------------------------------------------------------
+
+    async def get_elevenlabs_workflows(
+        self, organization_id: int
+    ) -> list[WorkflowModel]:
+        """List this organization's ElevenLabs-backed agents.
+
+        Sourced from our database rather than the vendor deliberately: the
+        vendor's agent list is workspace-wide, and on a shared workspace that
+        would show every client's agents.
+        """
+        async with self.async_session() as session:
+            result = await session.execute(
+                select(WorkflowModel)
+                .where(
+                    WorkflowModel.organization_id == organization_id,
+                    WorkflowModel.elevenlabs_agent_id.isnot(None),
+                    WorkflowModel.status == WorkflowStatus.ACTIVE.value,
+                )
+                .order_by(WorkflowModel.name)
+            )
+            return list(result.scalars().all())
+
+    async def get_workflow_by_elevenlabs_agent_id(
+        self, organization_id: int, elevenlabs_agent_id: str
+    ) -> Optional[WorkflowModel]:
+        """Resolve an agent id to this organization's workflow row, or None.
+
+        This is the ownership check for every agent route. It is scoped to the
+        organization by construction — there is no unscoped variant, because
+        the vendor will happily confirm that another client's agent exists.
+        """
+        async with self.async_session() as session:
+            result = await session.execute(
+                select(WorkflowModel).where(
+                    WorkflowModel.organization_id == organization_id,
+                    WorkflowModel.elevenlabs_agent_id == elevenlabs_agent_id,
+                )
+            )
+            return result.scalars().first()
+
+    async def create_elevenlabs_workflow(
+        self,
+        organization_id: int,
+        user_id: int,
+        name: str,
+        elevenlabs_agent_id: str,
+    ) -> WorkflowModel:
+        """Record a newly created ElevenLabs agent against an organization."""
+        async with self.async_session() as session:
+            workflow = WorkflowModel(
+                organization_id=organization_id,
+                user_id=user_id,
+                name=name,
+                elevenlabs_agent_id=elevenlabs_agent_id,
+                status=WorkflowStatus.ACTIVE.value,
+            )
+            session.add(workflow)
+            await session.commit()
+            await session.refresh(workflow)
+
+            logger.info(
+                f"Recorded ElevenLabs agent {elevenlabs_agent_id} as workflow "
+                f"{workflow.id} for organization {organization_id}"
+            )
+            return workflow
+
+    async def rename_workflow(
+        self, workflow_id: int, organization_id: int, name: str
+    ) -> None:
+        """Rename a workflow, scoped to its organization."""
+        async with self.async_session() as session:
+            await session.execute(
+                update(WorkflowModel)
+                .where(
+                    WorkflowModel.id == workflow_id,
+                    WorkflowModel.organization_id == organization_id,
+                )
+                .values(name=name)
+            )
+            await session.commit()
+
+    async def archive_workflow(self, workflow_id: int, organization_id: int) -> None:
+        """Archive rather than delete.
+
+        Historical runs reference this row, and Phase 5's retention work
+        depends on them still resolving after the engine is gone.
+        """
+        async with self.async_session() as session:
+            await session.execute(
+                update(WorkflowModel)
+                .where(
+                    WorkflowModel.id == workflow_id,
+                    WorkflowModel.organization_id == organization_id,
+                )
+                .values(status=WorkflowStatus.ARCHIVED.value)
+            )
+            await session.commit()

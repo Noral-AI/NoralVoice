@@ -180,6 +180,159 @@ async def create_credential(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ---------------------------------------------------------------------------
+# Provider credentials
+#
+# One credential per organization per provider ("elevenlabs"), set and rotated
+# through the UI and never through env or code. The secret goes in and never
+# comes back out: reads return last_four only (plan §9.1).
+# ---------------------------------------------------------------------------
+
+SUPPORTED_PROVIDERS = {"elevenlabs"}
+
+
+class SetProviderCredentialRequest(BaseModel):
+    """Request schema for installing or rotating a provider secret."""
+
+    secret: str
+
+
+class ProviderCredentialResponse(BaseModel):
+    """What a read of a provider credential is allowed to disclose.
+
+    Deliberately has no field that could carry the secret. This is the schema
+    that enforces §9.1 — if a future change wants to return more, it has to add
+    a field here, which is a visible decision rather than an accident.
+    """
+
+    provider: str
+    configured: bool
+    last_four: Optional[str] = None
+    rotated_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+
+
+def _require_supported_provider(provider: str) -> str:
+    if provider not in SUPPORTED_PROVIDERS:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Unknown provider '{provider}'",
+        )
+    return provider
+
+
+def _require_organization(user: UserModel) -> int:
+    if not user.selected_organization_id:
+        raise HTTPException(
+            status_code=400, detail="No organization selected for the user"
+        )
+    return user.selected_organization_id
+
+
+@router.get(
+    "/providers/{provider}",
+    **sdk_expose(
+        method="get_provider_credential",
+        description="Report whether a provider credential is installed. Never returns the secret.",
+    ),
+)
+async def get_provider_credential(
+    provider: str,
+    user: UserModel = Depends(get_user),
+) -> ProviderCredentialResponse:
+    """Report whether a provider credential is installed, and show its last four.
+
+    Never returns the secret. An organization with no credential gets
+    `configured: false` rather than a 404, because "not set up yet" is a normal
+    state the settings page renders, not an error.
+    """
+    organization_id = _require_organization(user)
+    _require_supported_provider(provider)
+
+    credential = await db_client.get_provider_credential(organization_id, provider)
+
+    if not credential:
+        return ProviderCredentialResponse(provider=provider, configured=False)
+
+    return ProviderCredentialResponse(
+        provider=provider,
+        configured=True,
+        last_four=credential.last_four,
+        rotated_at=credential.rotated_at,
+        created_at=credential.created_at,
+    )
+
+
+@router.put(
+    "/providers/{provider}",
+    **sdk_expose(
+        method="set_provider_credential",
+        description="Install or rotate the secret for a provider.",
+    ),
+)
+async def set_provider_credential(
+    provider: str,
+    request: SetProviderCredentialRequest,
+    user: UserModel = Depends(get_user),
+) -> ProviderCredentialResponse:
+    """Install or rotate the secret for a provider.
+
+    Rotation is the same call as installation — there is no separate rotate
+    endpoint, because a rotate that behaved differently from a set is a second
+    code path handling the same secret, and one of the two would rot.
+    """
+    organization_id = _require_organization(user)
+    _require_supported_provider(provider)
+
+    secret = request.secret.strip()
+    if not secret:
+        raise HTTPException(status_code=422, detail="Secret must not be empty")
+
+    credential = await db_client.set_provider_credential(
+        organization_id=organization_id,
+        user_id=user.id,
+        provider=provider,
+        secret=secret,
+    )
+
+    return ProviderCredentialResponse(
+        provider=provider,
+        configured=True,
+        last_four=credential.last_four,
+        rotated_at=credential.rotated_at,
+        created_at=credential.created_at,
+    )
+
+
+@router.delete(
+    "/providers/{provider}",
+    status_code=204,
+    **sdk_expose(
+        method="revoke_provider_credential",
+        description="Revoke the active credential for a provider.",
+    ),
+)
+async def revoke_provider_credential(
+    provider: str,
+    user: UserModel = Depends(get_user),
+) -> None:
+    """Revoke the active credential for a provider.
+
+    Soft delete, so the row survives for audit. Revoking when nothing is
+    installed is a 404 rather than a silent success — the caller asked to
+    revoke something specific and it was not there.
+    """
+    organization_id = _require_organization(user)
+    _require_supported_provider(provider)
+
+    revoked = await db_client.revoke_provider_credential(organization_id, provider)
+    if not revoked:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No active {provider} credential to revoke",
+        )
+
+
 @router.get("/{credential_uuid}")
 async def get_credential(
     credential_uuid: str,
