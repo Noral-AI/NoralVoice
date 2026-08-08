@@ -1,4 +1,4 @@
-import { NodeProps, NodeToolbar, Position } from "@xyflow/react";
+import { NodeProps, NodeToolbar, Position, useStore } from "@xyflow/react";
 import * as LucideIcons from "lucide-react";
 import { Check, Circle, Copy, Edit, type LucideIcon, Trash2Icon } from "lucide-react";
 import Link from "next/link";
@@ -7,7 +7,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useWorkflow } from "@/app/workflow/[workflowId]/contexts/WorkflowContext";
 import type { NodeSpec } from "@/client/types.gen";
 import { DocumentBadges } from "@/components/flow/DocumentBadges";
-import { NodeEditForm, useNodeSpecs } from "@/components/flow/renderer";
+import { NodeEditForm, PromptPreview, useNodeSpecs } from "@/components/flow/renderer";
 import { ToolBadges } from "@/components/flow/ToolBadges";
 import { FlowNodeData } from "@/components/flow/types";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,10 @@ type NodeStyleVariant =
     | "trigger"
     | "webhook"
     | "qa";
+
+// Prompted call nodes that compose a global + node system prompt at runtime,
+// and therefore benefit from the combined-prompt preview.
+const PROMPT_PREVIEW_TYPES = new Set(["startCall", "agentNode", "endCall"]);
 
 const STYLE_VARIANT_BY_SPEC: Record<string, NodeStyleVariant> = {
     startCall: "start",
@@ -395,6 +399,14 @@ export const GenericNode = memo(({ data, selected, id, type }: GenericNodeProps)
     const { bySpecName } = useNodeSpecs();
     const spec = bySpecName.get(type);
 
+    // The workflow's global prompt (if any), read reactively but as a
+    // primitive so this node only re-renders when the global prompt text
+    // itself changes — not on every canvas drag.
+    const globalPrompt = useStore((s) => {
+        const g = s.nodes.find((n) => n.type === "globalNode");
+        return ((g?.data as FlowNodeData | undefined)?.prompt as string) ?? "";
+    });
+
     // ── Form state ─────────────────────────────────────────────────────
     const [values, setValues] = useState<Record<string, unknown>>(() =>
         spec ? seedValues(data, spec) : {},
@@ -564,6 +576,15 @@ export const GenericNode = memo(({ data, selected, id, type }: GenericNodeProps)
                                 recordings: recordings ?? [],
                             }}
                         />
+                        {PROMPT_PREVIEW_TYPES.has(type) && (
+                            <PromptPreview
+                                nodePrompt={(values.prompt as string) ?? ""}
+                                addGlobalPrompt={
+                                    (values.add_global_prompt as boolean) ?? true
+                                }
+                                globalPrompt={globalPrompt}
+                            />
+                        )}
                         {type === "trigger" && (
                             <TriggerWebhookUrls
                                 endpoints={buildTriggerEndpoints(data.trigger_path)}

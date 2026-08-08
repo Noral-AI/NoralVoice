@@ -7,6 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { client } from "@/client/client.gen";
 import { downloadWorkflowReportApiV1WorkflowWorkflowIdReportGet, getAmbientNoiseUploadUrlApiV1WorkflowAmbientNoiseUploadUrlPost, getWorkflowApiV1WorkflowFetchWorkflowIdGet, updateWorkflowApiV1WorkflowWorkflowIdPut } from "@/client/sdk.gen";
 import type { WorkflowResponse } from "@/client/types.gen";
 import { FlowEdge, FlowNode } from "@/components/flow/types";
@@ -1013,6 +1014,24 @@ function AutomationsSection({
 }) {
     const [slug, setSlug] = useState<string>(initialSlug || "");
     const [isSaving, setIsSaving] = useState(false);
+    const [n8nBaseUrl, setN8nBaseUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        client
+            .get({ url: "/api/v1/integrations/n8n/webhook-info" })
+            .then((res) => {
+                if (cancelled) return;
+                const body = (res.data ?? null) as { baseUrl?: string | null } | null;
+                if (body?.baseUrl) setN8nBaseUrl(body.baseUrl.replace(/\/$/, ""));
+            })
+            .catch(() => {
+                // Keep null — preview falls back to a placeholder host.
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const normalized = slug.trim().toLowerCase();
     const isCleared = normalized === "";
@@ -1063,9 +1082,10 @@ function AutomationsSection({
         }
     };
 
+    const baseForPreview = n8nBaseUrl || "https://<your-n8n-host>";
     const webhookExample = normalized
-        ? `https://automation.noral.ai/webhook/noralvoice/${normalized}/call-completed`
-        : `https://automation.noral.ai/webhook/noralvoice/call-completed`;
+        ? `${baseForPreview}/webhook/noralvoice/${normalized}/call-completed`
+        : `${baseForPreview}/webhook/noralvoice/call-completed`;
 
     return (
         <Card id="automations">

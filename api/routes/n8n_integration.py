@@ -8,10 +8,12 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 
 from api.db.models import UserModel
-from api.services.auth.depends import get_superuser
+from api.services.auth.depends import get_superuser, get_user
 from api.services.n8n_client import (
+    N8nConfigurationError,
     NoralVoiceAutomationEvent,
     get_n8n_status,
+    load_n8n_config,
     trigger_n8n_workflow,
 )
 
@@ -40,6 +42,26 @@ async def n8n_status(
 ) -> dict[str, Any]:
     """Return non-secret n8n configuration and health diagnostics."""
     return get_n8n_status()
+
+
+@router.get("/webhook-info")
+async def n8n_webhook_info(
+    _user: UserModel = Depends(get_user),
+) -> dict[str, Any]:
+    """Return the n8n base URL so the UI can render accurate webhook examples.
+
+    Available to any authenticated user (not just superusers) because workflow
+    owners need to see the URL pattern for their own automation slug.
+    """
+    try:
+        config = load_n8n_config()
+        return {
+            "enabled": config.enabled,
+            "configured": config.configured,
+            "baseUrl": config.base_url,
+        }
+    except N8nConfigurationError:
+        return {"enabled": False, "configured": False, "baseUrl": None}
 
 
 @router.post("/test")

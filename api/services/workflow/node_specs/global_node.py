@@ -1,4 +1,4 @@
-"""Spec for the Global node — system-level instructions appended to every
+"""Spec for the Global node — system-level instructions prepended to every
 agent node that opts in via `add_global_prompt`."""
 
 from api.services.workflow.node_specs._base import (
@@ -13,9 +13,9 @@ from api.services.workflow.node_specs._base import (
 SPEC = NodeSpec(
     name="globalNode",
     display_name="Global Node",
-    description="Persona/tone appended to every agent node's prompt.",
+    description="Persona/tone prepended to every agent node's prompt.",
     llm_hint=(
-        "System-level prompt appended to every prompted node whose "
+        "System-level prompt prepended to every prompted node whose "
         "`add_global_prompt` is true. Use it for persona, tone, and shared "
         "rules that apply across the entire conversation. At most one "
         "global node per workflow."
@@ -40,9 +40,9 @@ SPEC = NodeSpec(
             type=PropertyType.mention_textarea,
             display_name="Global Prompt",
             description=(
-                "Text appended to every prompted node's system prompt when "
-                "that node has `add_global_prompt=true`. Supports "
-                "{{template_variables}}."
+                "Text prepended to every prompted node's system prompt when "
+                "that node has `add_global_prompt=true` (placed above the "
+                "node's own prompt). Supports {{template_variables}}."
             ),
             required=True,
             min_length=1,

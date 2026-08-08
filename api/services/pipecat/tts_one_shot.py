@@ -36,15 +36,13 @@ if TYPE_CHECKING:
     from api.schemas.user_configuration import UserConfiguration
 
 
-# Providers whose Pipecat services emit MP3. Everything else emits raw
-# 16-bit signed PCM and gets WAV-wrapped before going to the browser.
-# Source: design doc §5 table.
-_MP3_PROVIDERS: frozenset[str] = frozenset(
-    {
-        ServiceProviders.ELEVENLABS.value,
-        ServiceProviders.OPENAI.value,
-    }
-)
+# Every Pipecat TTS service in NV's catalog yields raw 16-bit signed PCM via
+# TTSAudioRawFrame, so synthesize() WAV-wraps all of them before returning audio
+# to the browser. This explicitly includes ElevenLabs (the WS service requests
+# ``output_format=pcm_*``) and OpenAI (``response_format="pcm"``): an earlier
+# design assumed those two emit MP3, but the streaming services that are wired
+# up never do — that assumption shipped raw PCM mislabeled as ``audio/mpeg``,
+# which browsers can't decode (or play at the wrong rate).
 
 
 @dataclass(frozen=True)
@@ -192,21 +190,20 @@ async def synthesize(
 
 
 def _provider_native_content_type(provider: str) -> str:
-    """Return the HTTP Content-Type the wrapper emits for this provider.
+    """Return the HTTP Content-Type ``synthesize()`` emits for this provider.
 
-    Per design doc §5: ElevenLabs + OpenAI emit MP3 (pass-through);
-    everything else emits raw PCM that the wrapper wraps in a WAV header.
+    Every provider in NV's catalog streams raw PCM via TTSAudioRawFrame (see the
+    module note above), so this always resolves to WAV. The function only guards
+    against a provider outside the catalog; the Pydantic discriminator on
+    TTSConfig already rejects those, so reaching the raise means the catalog grew
+    without this list being updated.
 
     Raises:
         TTSOneShotError: if ``provider`` isn't in NV's TTS catalog.
     """
-    if provider in _MP3_PROVIDERS:
-        return "audio/mpeg"
-    # Anything else is one of the 7 PCM providers (cartesia, deepgram,
-    # sarvam, rime, dograh, speaches, camb). The Pydantic discriminator
-    # on TTSConfig already rejects unknown providers, but guard here for
-    # defense in depth.
     known_pcm_providers = {
+        ServiceProviders.ELEVENLABS.value,
+        ServiceProviders.OPENAI.value,
         ServiceProviders.CARTESIA.value,
         ServiceProviders.DEEPGRAM.value,
         ServiceProviders.SARVAM.value,

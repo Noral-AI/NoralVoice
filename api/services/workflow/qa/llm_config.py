@@ -52,6 +52,20 @@ async def resolve_user_llm_config(
     if workflow_run.workflow and workflow_run.workflow.user:
         user_id = workflow_run.workflow.user.id
 
+    return await resolve_user_llm_config_by_id(user_id)
+
+
+async def resolve_user_llm_config_by_id(
+    user_id: int | None,
+) -> tuple[str, str, str, dict]:
+    """Resolve a user's configured LLM (from UserConfiguration) by user id.
+
+    Useful outside a workflow run (e.g. generating a workflow at creation
+    time, before any run exists).
+
+    Returns:
+        (provider, model, api_key, service_kwargs) tuple
+    """
     llm_config: dict = {}
     if user_id:
         user_configuration = await db_client.get_user_configurations(user_id)

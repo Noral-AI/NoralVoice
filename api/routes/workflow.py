@@ -26,7 +26,6 @@ from api.services.configuration.masking import (
     merge_workflow_api_keys,
 )
 from api.services.configuration.resolve import resolve_effective_config
-from api.services.mps_service_key_client import mps_service_key_client
 from api.services.n8n_client import (
     InvalidAutomationSlugError,
     validate_automation_slug,
@@ -37,6 +36,10 @@ from api.services.storage import storage_fs
 from api.services.workflow.dto import ReactFlowDTO, sanitize_workflow_definition
 from api.services.workflow.duplicate import duplicate_workflow
 from api.services.workflow.errors import ItemKind, WorkflowError
+from api.services.workflow.workflow_generator import (
+    WorkflowGenerationError,
+    generate_workflow_definition,
+)
 from api.services.workflow.workflow_graph import WorkflowGraph
 
 
@@ -516,8 +519,8 @@ async def create_workflow_from_template(
     Create a new workflow from a natural language template request.
 
     This endpoint:
-    1. Uses mps_service_key_client to call MPS workflow API
-    2. Passes organization ID (authenticated mode) or created_by (OSS mode)
+    1. Generates a workflow definition locally with the user's configured LLM
+    2. Regenerates trigger UUIDs and validates trigger-path availability
     3. Creates the workflow in the database
 
     Args:
@@ -528,27 +531,24 @@ async def create_workflow_from_template(
         The created workflow
 
     Raises:
-        HTTPException: If MPS API call fails
+        HTTPException: 422 if a valid workflow could not be generated
     """
     try:
-        # Call MPS API to generate workflow using the client
-        if DEPLOYMENT_MODE == "oss":
-            workflow_data = await mps_service_key_client.call_workflow_api(
-                call_type=request.call_type.upper(),
-                use_case=request.use_case,
-                activity_description=request.activity_description,
-                created_by=str(user.provider_id),
-            )
-        else:
-            if not user.selected_organization_id:
-                raise HTTPException(status_code=400, detail="No organization selected")
+        if DEPLOYMENT_MODE != "oss" and not user.selected_organization_id:
+            raise HTTPException(status_code=400, detail="No organization selected")
 
-            workflow_data = await mps_service_key_client.call_workflow_api(
+        # Generate the workflow locally using the user's own configured LLM.
+        # (Previously this called the hosted MPS generation service, which
+        # required a separate service key and 401'd for self-hosted orgs.)
+        try:
+            workflow_data = await generate_workflow_definition(
                 call_type=request.call_type.upper(),
                 use_case=request.use_case,
                 activity_description=request.activity_description,
-                organization_id=user.selected_organization_id,
+                user_id=user.id,
             )
+        except WorkflowGenerationError as e:
+            raise HTTPException(status_code=422, detail=str(e))
 
         # Create the workflow in our database
         # Regenerate trigger UUIDs to avoid conflicts with existing triggers
