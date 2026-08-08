@@ -41,8 +41,13 @@ Design: plan §10. Six steps.
 - [x] Transparent encrypt/decrypt in the credential client, legacy plaintext passthrough — `cccf922`
 - [x] Schema migration — `provider`, `last_four`, `rotated_at` — `53a6bab` (head now `a1c4e7b920f3`, still single)
 - [x] Set/rotate/revoke routes — `188e26e` — `PUT|GET|DELETE /api/v1/credentials/providers/{provider}`
-- [ ] Settings UI — key entered by a human, never by me (**S1**) ⬅ **next**
-- [ ] Data migration of existing plaintext — **S2 HARD STOP, needs a verified backup**
+- [x] Settings UI — key entered by a human, never by me (**S1**) — `1447b9e` — Settings → Voice provider
+- [x] Seal/unseal seam for `user_configurations` + `organization_configurations` — `1447b9e` — **the migration's prerequisite**
+- [ ] Data migration of existing plaintext — **S2 HARD STOP, needs a verified backup** ⬅ only thing left in 1a
+
+**The migration is now safe to write, and still gated.** All three §10.4 scopes have a working seal/unseal seam, so encrypting their rows will not break reads. What remains is the migration itself plus S2 clearance (a verified, restorable backup) — those LLM/TTS keys serve production calls.
+
+`organization_configurations` is sealed **selectively** — only `TELEPHONY_CONFIGURATION`, `TWILIO_CONFIGURATION`, `LANGFUSE_CREDENTIALS`. The table is a general key/value store; sealing disposition mappings would make them opaque to queries that inspect them. The migration must respect the same key list (`SECRET_BEARING_KEYS` in `api/db/organization_configuration_client.py`).
 
 **Test state:** 109 passing across the credential suite (`test_provider_credentials`, `test_credential_encryption`, `test_custom_tools`, `test_integration_webhooks`, `test_masked_key_rejection`). No Postgres needed — these are in-process with the DB client mocked.
 
