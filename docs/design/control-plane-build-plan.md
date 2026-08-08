@@ -156,8 +156,9 @@ With one workspace, all clients' agents, phone numbers, conversations and record
 
 This matters more than average here because of the §6 portfolio: a medspa, a school, a housing authority, consumer-credit qualification. Consequences:
 
-- **Phase 0.6 must check ElevenLabs' retention and privacy controls** — zero-retention or reduced-retention modes, and what is stored vendor-side at all — since minimising vendor-held data is the main lever we still have.
+- ~~**Phase 0.6 must check ElevenLabs' retention and privacy controls**~~ ✅ **done 2026-08-08** — [capability spike §2](./control-plane-phase-0.6-capability-spike.md). **Most of the lever is Enterprise-only**: BAA, workspace-wide ZRM and data residency all sit behind the same tier as consolidated billing. What our tier *does* give us is **per-agent retention, transcripts and audio configured separately, settable to 0 for immediate deletion** — against a default of **2 years**, which must never be left alone. Per-agent ZRM's tier is unstated and worth confirming, because under ZRM **post-call webhooks still fire**, so our ingestion path survives it and the vendor stores nothing.
 - Treat the workspace key as the highest-value secret in the system. It is one credential away from total portfolio disclosure.
+- **The Enterprise question is now broader than §5.1 answered.** That analysis was about billing and remains correct on its own terms — but Enterprise is also the only route to a BAA, workspace-enforced ZRM and non-US residency. Given the §6 portfolio that is a different trade from the one evaluated. See §12.9.
 - Revisit before onboarding any client with a contractual isolation requirement.
 
 ### 5.4 Forward path
@@ -186,10 +187,11 @@ Compounding this: with a single shared workspace (§5.3), every one of these cli
 
 **Required before Phase 4 migrates any of these clients:**
 
-- Confirm no client contract contains a data-residency, retention, or subprocessor clause that this migration breaks. Note `api/services/configuration/registry.py:495` already exposes an ElevenLabs EU residency endpoint — someone previously anticipated this.
-- Confirm whether ElevenLabs will sign a BAA if medspa call content warrants one.
-- Decide retention policy for recordings and transcripts in MinIO, per client.
+- Confirm no client contract contains a data-residency, retention, or subprocessor clause that this migration breaks. Note `api/services/configuration/registry.py:495` already exposes an ElevenLabs EU residency endpoint — someone previously anticipated this. **Now known:** standard storage is **US**, and residency (EU/India/Singapore) is Enterprise-only *and* means a separate isolated environment — distinct portal, API endpoint and workspace, agents recreated via API. Not a flag; a second deployment.
+- ~~Confirm whether ElevenLabs will sign a BAA if medspa call content warrants one.~~ ✅ **answered 2026-08-08: yes, but Enterprise-only, and only with Zero Retention Mode engaged** (plus approved-LLMs-only, with compliance responsibility on us). See capability spike §2.4. For **Aspire Medspa** this leaves exactly three branches, no fourth: (a) buy Enterprise + BAA + ZRM; (b) determine and document that the content is not PHI, then migrate it as an ordinary client; (c) leave it on Synthflow — which makes the engine's replacement non-universal and re-opens Phase 5's deletion premise.
+- Decide retention policy for recordings and transcripts in MinIO, per client — **and the matching vendor-side retention value**, which our tier lets us set per agent down to 0. Vendor retention only needs to outlive successful ingestion plus the Phase 2 reconciliation window, not the reporting horizon.
 - Confirm DNC/opt-out state survives the platform change, and that consent records remain auditable.
+- **Do not recreate `info_extractor_ccnumber` without an explicit decision.** Capturing card digits into a transcript on a shared workspace is the worst combination of facts in this plan.
 
 Regulated clients migrate **last**, after the pattern is proven on unregulated ones.
 
@@ -400,6 +402,8 @@ Phase 4 dominates and is the one to resource deliberately.
 6. `.claude/` was added to `.gitignore` in passing — keep or revert.
 7. **Phase 3 editor scope — does our editor author ElevenLabs workflow graphs?** (New 2026-08-08, from M1/§4.5.) Blocks the Phase 3 editor build only; nothing before it. Needs a human decision between: (a) our editor covers workflow authoring, costing materially more UI than §11 budgets; (b) our editor owns the flat surface and branching agents are authored in the ElevenLabs dashboard, accepting a split authoring story; (c) defer — ship flat, revisit once the complexity profile (Phase 0.6 task 5) says how many of the 91 agents actually branch. **(c) is likely right, and the profile answers it.**
 8. **Confirm the data-collection item cap for our plan tier** (§4.3). Docs say 25, or 40 on Trial/Enterprise. Cheap to confirm in-product; it sets the threshold the complexity profile measures against.
+9. **Re-open the Enterprise question on compliance grounds, not billing grounds.** (New 2026-08-08, from the §2 retention findings.) §5.1 correctly concluded Enterprise loses on billing alone. It is also the only route to a BAA, workspace-enforced ZRM and non-US data residency — so the real question is whether the §6 portfolio needs any of those. Blocks Phase 4 for Aspire Medspa (already S5-gated); blocks nothing before it.
+10. **Confirm whether per-agent Zero Retention Mode is available below Enterprise, and whether `post_call_audio` still fires under it.** (New 2026-08-08.) The docs state a tier for workspace-wide ZRM but not for per-agent ZRM. If per-agent ZRM is available to us it is the strongest privacy control on the table and largely collapses the §5.3 residual for agents using it. The audio question is the catch: ZRM stores no recordings, and if the audio webhook does not fire either, ZRM and §15's "playable recording" are mutually exclusive. Settle both empirically in Phase 1b once a key exists — before ZRM is promised to any client.
 
 ---
 

@@ -6,7 +6,7 @@ Read-only against both platforms. **No product code is written in this phase.**
 | # | Task | Status |
 |---|---|---|
 | 1 | Verify ElevenLabs feature mapping for each §4.3 row | ✅ 2026-08-08 |
-| 2 | Check retention / privacy controls | ⬜ |
+| 2 | Check retention / privacy controls | ✅ 2026-08-08 |
 | 3 | Prototype Cal.com booking in n8n | ⬜ |
 | 4 | Prototype SMS opt-in in n8n | ⬜ |
 | 5 | Reliability baseline from `workflow_runs` | ⬜ |
@@ -78,3 +78,81 @@ WebSearch  agent-workflows (elevenlabs.io)
 ```
 
 Docs are a claim, not a proof. Every mapping above is re-proven behaviourally by the Phase 3 reference agent, which exercises all five action types on a real call.
+
+---
+
+## 2. Retention and privacy controls
+
+Plan §5.3 set this task because, with one shared workspace, "minimising vendor-held data is the main lever we still have." The finding: **most of that lever is behind the Enterprise tier we decided not to buy** — but the one control that matters most for day-to-day data minimisation is not.
+
+### 2.1 What is available on our tier
+
+**Configurable retention, per agent, transcripts and audio separately.**
+
+| Setting | Value |
+|---|---|
+| Default retention | **2 years** |
+| Configurable | Per agent, in days |
+| Transcripts vs audio | Configured **separately** |
+| Unlimited | `-1` |
+| **Immediate deletion** | **`0`** |
+| Retroactive | Optional — reducing the period can delete existing data immediately |
+
+Two years by default is a long time to hold a medspa's call transcripts on a shared workspace. **This should be turned down deliberately per client rather than left at the default**, and the value belongs in the per-client config we build in Phase 1b, not in someone's memory.
+
+### 2.2 What is behind Enterprise
+
+Four things we might have wanted all sit behind the same paywall:
+
+| Control | Tier | Consequence for us |
+|---|---|---|
+| **BAA execution** | Enterprise only | See §2.4 — this is the Aspire Medspa question, now answered |
+| **Workspace-wide Zero Retention Mode** | Enterprise | Per-agent ZRM may still be reachable — §2.3 |
+| **Data residency** (EU / India / Singapore) | Enterprise | Standard storage is **US**. Note `api/services/configuration/registry.py:495` already exposes an EU residency endpoint — someone anticipated a need we cannot currently meet. Residency also means a *separate isolated environment*: distinct portal, API endpoint and workspace, with agents recreated via API. Not a flag — a second deployment. |
+| **Consolidated billing** | Enterprise | Already known (§5.1) — the original reason we are not on Enterprise |
+
+**This changes the shape of the Enterprise question.** §5 evaluated Enterprise purely on billing and concluded 14 subscriptions cost more than one pooled plan. That analysis was correct and is unchanged — but it was answering a narrower question than the one now on the table. Enterprise is not just consolidated billing; it is *also* the only route to a BAA, to workspace-enforced ZRM, and to non-US residency. Given the §6 portfolio, that is a materially different trade. **Flagged for a human (D3); not re-decided here.**
+
+### 2.3 Per-agent Zero Retention Mode — the important unknown
+
+There are two ZRM docs: a workspace-level one explicitly marked Enterprise, and a **per-agent** one that **does not state a tier**. If per-agent ZRM is available below Enterprise it is the single most valuable privacy control on the table, so its tier is worth confirming in-product early.
+
+Under ZRM: no recordings stored, no transcripts or PII-bearing metadata logged or stored post-call. Critically — **post-call webhooks still fire, and are documented as the way to retrieve call information under ZRM.** That is precisely our Phase 2 ingestion path, so the §9.3 data-ownership position survives ZRM intact: ElevenLabs stores nothing, we store everything, in our own Postgres and MinIO.
+
+If per-agent ZRM is available to us, it substantially collapses the §5.3 residual for any agent that has it on — commingling is far less alarming when there is nothing vendor-side to commingle.
+
+**The open question that must be answered before relying on it:** ZRM says no recordings are stored, and the audio arrives via a *separate* `post_call_audio` webhook. **The docs do not say whether `post_call_audio` still fires under ZRM.** If it does, we get the ideal configuration. If it does not, ZRM means no recordings at all for that agent — which collides with §15's "playable recording" for every call. This is cheap to settle empirically once a key exists (Phase 1b), and it must be settled before ZRM is promised to any client. Logged as D4.
+
+### 2.4 The compliance answers §6 asked for
+
+§6 asked "Confirm whether ElevenLabs will sign a BAA if medspa call content warrants one." **Answered: yes — but only on Enterprise, and only with ZRM engaged.**
+
+Stated requirements for HIPAA-eligible use: Enterprise tier **and** an executed BAA **and** Zero Retention Mode active **and** only approved LLMs, with compliance responsibility resting on us as the customer.
+
+So for **Aspire Medspa**, the decision tree is now concrete and has no third branch:
+
+1. Buy Enterprise, execute a BAA, run that agent under ZRM — and accept §2.3's recording question, since ZRM is mandatory here, not optional.
+2. Establish that the medspa's call content does not constitute PHI, document that determination, and migrate it as an ordinary client.
+3. Leave Aspire Medspa on Synthflow — which means the engine's replacement is not universal, and §7 Phase 5's deletion premise needs re-examining.
+
+This does **not** block Phase 0.6, and it does not block Phases 1a–3, none of which touch a client. It sharpens an existing §6 gate that already blocks Phase 4 for this client under **S5**. Regulated clients were already scheduled last; that ordering now has a specific reason and a specific cost attached.
+
+### 2.5 Recommended default posture
+
+Pending the decisions above, the posture to build toward — cheap, available on our tier today, and strictly better than the default:
+
+- **Never leave retention at 2 years.** Set it per client, deliberately, as part of onboarding.
+- **Transcripts and audio get separate values.** Audio is the higher-risk artifact and usually needs the shorter life.
+- **Our copy is the durable one.** Vendor retention only needs to outlive successful ingestion plus reconciliation lag (Phase 2's backfill window), not the reporting horizon. Once the reconciliation job is proven, vendor retention can be short — days, not years.
+- **`info_extractor_ccnumber` (§6) does not get recreated** without an explicit decision. Capturing card digits into a transcript on a shared workspace is the worst combination of facts in this document.
+
+### 2.6 Verification commands
+
+```
+WebSearch  zero retention mode / retention / HIPAA (elevenlabs.io)
+WebFetch elevenlabs.io/docs/eleven-agents/customization/privacy/retention
+WebFetch elevenlabs.io/docs/eleven-agents/customization/privacy/zrm
+WebFetch elevenlabs.io/docs/eleven-agents/legal/hipaa
+WebFetch elevenlabs.io/docs/agents-platform/workflows/post-call-webhooks
+WebFetch elevenlabs.io/docs/overview/administration/data-residency
+```
