@@ -19,6 +19,7 @@ from sqlalchemy import (
     and_,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import declarative_base, relationship
 
 from api.constants import DEFAULT_CAMPAIGN_RETRY_CONFIG
@@ -86,6 +87,21 @@ class OrganizationModel(Base):
     id = Column(Integer, primary_key=True, index=True)
     provider_id = Column(String, unique=True, index=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
+    # Human-readable client name and lifecycle state. The table previously
+    # carried neither, which made every operator-facing client list show
+    # opaque provider ids.
+    name = Column(String, nullable=True)
+    status = Column(String(32), nullable=True)
+
+    # Which ElevenLabs workspace this organization's agents live in.
+    #
+    # Populated from day one even though every organization currently resolves
+    # to the same workspace. That is the point: when a client needs its own —
+    # for a contractual isolation requirement, or to sit behind a BAA — moving
+    # it becomes a data change on this row plus a new credential, with no code
+    # change anywhere.
+    elevenlabs_workspace_id = Column(String, nullable=True)
 
     # Quota fields
     quota_type = Column(
@@ -246,6 +262,10 @@ class TelephonyPhoneNumberModel(Base):
     address_type = Column(String(16), nullable=False)
     country_code = Column(String(2), nullable=True)
     label = Column(String(64), nullable=True)
+
+    # ElevenLabs' own id for this number once imported, needed to assign it to
+    # an agent. NULL until the number is registered with the vendor.
+    elevenlabs_phone_number_id = Column(String, nullable=True, index=True)
     inbound_workflow_id = Column(
         Integer,
         ForeignKey("workflows.id", ondelete="SET NULL"),
@@ -376,6 +396,12 @@ class WorkflowModel(Base):
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True)
     organization = relationship("OrganizationModel")
     name = Column(String, index=True, nullable=False)
+
+    # The ElevenLabs agent this workflow row represents, once migrated. NULL
+    # for engine-backed workflows, which keeps both kinds in one table and one
+    # list during the transition.
+    elevenlabs_agent_id = Column(String, nullable=True, index=True)
+    elevenlabs_current_version = Column(String, nullable=True)
     status = Column(
         Enum(*[status.value for status in WorkflowStatus], name="workflow_status"),
         nullable=False,
@@ -494,6 +520,28 @@ class WorkflowRunModel(Base):
     queued_run_id = Column(Integer, ForeignKey("queued_runs.id"), nullable=True)
     queued_run = relationship("QueuedRunModel", foreign_keys=[queued_run_id])
     public_access_token = Column(String(36), nullable=True)
+
+    # --- ElevenLabs-sourced calls -------------------------------------
+    # Runs land here from two sources: the legacy engine, and ElevenLabs.
+    # These columns are populated only for the latter and stay NULL for
+    # engine runs, so both kinds coexist in one table during the transition.
+
+    # The idempotency key for ingestion. UNIQUE, which is what makes replaying
+    # a webhook — or running reconciliation over a window already ingested —
+    # safe rather than duplicating the call.
+    elevenlabs_conversation_id = Column(String, nullable=True, unique=True, index=True)
+
+    # Denormalised so a run resolves without joining workflows. That matters
+    # more than usual here: the engine tables this would otherwise join to are
+    # scheduled for deletion, and historical runs must survive that.
+    elevenlabs_agent_id = Column(String, nullable=True, index=True)
+
+    duration_seconds = Column(Integer, nullable=True)
+    sentiment = Column(String, nullable=True)
+
+    # Full turn-by-turn transcript. JSONB rather than JSON so it is queryable —
+    # reporting wants to search inside transcripts, not just render them.
+    transcript = Column(JSONB, nullable=True)
 
     # Indexes
     __table_args__ = (
