@@ -2,7 +2,20 @@
 
 **Supersedes** v2 (`4adda9a`) and the v1 brief ([control-plane-build-prompt-v1-superseded.md](./control-plane-build-prompt-v1-superseded.md)).
 **Inputs:** [Phase 0 recon](./control-plane-phase-0-recon.md) · [red-team review](./control-plane-plan-red-team.md) · live Synthflow inventory taken 2026-08-08 (§4).
-**Status:** rebuilt to close all 21 red-team findings. Phase 0.6 (capability spike) is the next action.
+**Status:** all 21 red-team findings closed. Phases 0 and 0.5 complete. **Phase 0.6 (capability spike) is the next action** — nothing blocks it.
+
+### Decisions taken
+
+| Date | Decision | Effect |
+|---|---|---|
+| 2026-08-08 | **Vendor: ElevenLabs** | §3. Phase 4 is a real migration of 91 Synthflow agents, not an import. |
+| 2026-08-08 | **Not on Enterprise → single workspace** | §5. Isolation controls built for real; vendor-side residual documented, not hand-waved. |
+| 2026-08-08 | **API key managed in the platform, not env** | §10. Requires encryption at rest, which did not previously exist anywhere in `api/`. |
+| 2026-08-08 | **Encrypt existing plaintext credentials too** | §10.4. One fenced migration against live rows. |
+| 2026-08-08 | **NoralOS `noralai.noralvoice` plugin not needed** | Phase 3 loses its cross-repo gate; graph-authoring surface deleted in Phase 5 step 3. |
+| 2026-08-08 | **Destructive delete moves to Phase 5** | Strangler, not big-bang — prod is live. |
+
+**Open items — all time-gated, none blocking:** compliance confirmations before Phase 4 touches a regulated client (§6); a verified backup immediately before the Phase 1a migration step (§10.4); `.claude/` in `.gitignore` (keep or revert).
 
 ---
 
