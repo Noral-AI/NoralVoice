@@ -49,7 +49,7 @@ v2 was reviewed adversarially; 21 findings resulted. All are closed here.
 | **H4** Webhook-only ingestion loses calls | Reconciliation backfill job in Phase 2. |
 | **H5** No rollback, no point of no return | Per-client rollback runbook + explicit irreversibility gate (§7 Phase 4/5). |
 | **H6** Phase 5 orphans historical calls | Retention step with denormalisation and a verified pre-migration call (§7 Phase 5). |
-| **M1** Unverified "no graph counterpart" claim | Verified in Phase 0.6 before scope is fixed. |
+| **M1** Unverified "no graph counterpart" claim | **Verified 2026-08-08 — and the claim was wrong.** ElevenLabs has **Agent Workflows**, a visual conversation-graph editor (§4.5). Consequences in §7 Phase 3/5 and §12.7. |
 | **M2** BYO-LLM uncapped | Capped at §9.2 with a latency budget and a client ceiling. |
 | **M3** No exit story | §9.3 — no abstraction, but our data stays complete and the exit cost is written down. |
 | **M4** Reliability never measured | Baseline computed in Phase 0.6; threshold in Phase 4 acceptance (§8.3). |
@@ -98,15 +98,29 @@ Census over 150 of 159 actions (pages 1–3; the tail does not introduce new typ
 
 ### 4.3 Gap analysis against ElevenLabs
 
+Risks below are **post-verification** — each row was checked against live ElevenLabs docs on 2026-08-08. Full evidence: [Phase 0.6 capability spike](./control-plane-phase-0.6-capability-spike.md) §1. No gap lacks a viable mapping, so no S6 stop fired.
+
 | Capability | Maps to | Risk |
 |---|---|---|
-| Data extraction (~105) | ElevenLabs data collection / evaluation criteria | **Low.** Direct conceptual match. The 159 extractor identifiers become our equivalence contract (§8). |
-| Cold transfer (~40) | `transfer_to_number` system tool | **Low–medium.** Verify cold vs. warm semantics and that natural-language trigger conditions carry over faithfully. |
-| SMS (5) | **No native equivalent** — webhook tool → n8n → Twilio | **Medium.** n8n can do it; the workflows **do not exist yet**. |
-| Cal.com booking (5) | **No native equivalent** — webhook tool → n8n → Cal.com | **Highest.** The native action carries real logic: slot windows, days ahead, per-day slot caps, timezone, first-available date. All of that must be rebuilt. |
-| Pre-call HTTP fetch (4) | Webhook tools / dynamic variables | **Medium.** Verify ElevenLabs supports a genuine *pre-call* fetch that populates variables before the first turn. |
+| Data extraction (~105) | ElevenLabs **data collection** — String / Boolean / Integer / Number, each with an Identifier | **Low, with a hard cap.** Identifiers map 1:1, so the §8 equivalence contract carries over. But data collection is capped at **25 items per agent** (40 on Trial/Enterprise) and there is **no enum/choice type** — Synthflow `choice` extractors become prompt-constrained Strings. |
+| Cold transfer (~40) | `transfer_to_number` system tool, **blind** mode | **Low.** Confirmed: blind = cold, Twilio-native (which we have); conditions are natural-language and LLM-evaluated, the same shape as the Synthflow trigger. |
+| SMS (5) | **No native equivalent** — webhook tool → n8n → Twilio | **Medium.** Confirmed absent from the system-tool list. n8n can do it; the workflows **do not exist yet**. |
+| Cal.com booking (5) | **No native equivalent** — webhook tool → n8n → Cal.com | **Highest.** Confirmed absent. The native action carries real logic: slot windows, days ahead, per-day slot caps, timezone, first-available date. All of that must be rebuilt. |
+| Pre-call HTTP fetch (4) | **Conversation initiation webhook** (inbound) / initiation payload (outbound) | **Low.** Confirmed genuine: fires during Twilio's dial period, returns `dynamic_variables` + overrides, in place before the first turn. Adds a second, latency-sensitive inbound endpoint to Phase 2. |
 
 **The honest conclusion:** n8n does cover the integration surface, but "covered by n8n" is not the same as "already built." Cal.com booking and SMS are today *native platform features* we get for free. On ElevenLabs they become **n8n workflows we own, build, and operate**. That is net-new work this plan now carries explicitly, and it is concentrated in a small number of agents.
+
+**The 25-item cap is the one new constraint that could bite.** 159 extractors over 91 agents averages 1.7, but the average is not the risk — a single qualification-heavy agent over 25 cannot be recreated as one ElevenLabs agent and must be split across workflow nodes or chained agents. Phase 0.6's complexity profile therefore reports **max extractors on any one agent**, not just the total.
+
+### 4.5 ElevenLabs has a graph editor (M1, verified 2026-08-08)
+
+**Agent Workflows** is a visual conversation-flow editor: subagent nodes, tool nodes (a dedicated execution point that *guarantees* the call, unlike a tool merely offered to the LLM), agent-transfer, transfer-to-number and end-call nodes, joined by edges carrying LLM-evaluated natural-language conditions, with per-node analytics.
+
+The v2 assumption that no graph counterpart existed was wrong. Three consequences, carried into the phases below:
+
+1. **Phase 5 step 3 still deletes the graph-authoring surface — but for a corrected reason.** `api/mcp_server/` and the typed graph builders author *Dograh's* graph shape, which will no longer run anything. The counterpart exists; it is the vendor's, not ours.
+2. **Phase 3's editor scope is now an open decision** (§12.7). A prompt/voice/tools editor cannot express a branching agent.
+3. **It is a migration lever.** Tool nodes suit deterministic Synthflow actions better than prompt-offered tools, and nodes are the natural way to split an agent that busts the 25-item cap.
 
 ### 4.4 Two incidental findings
 
@@ -195,11 +209,11 @@ Shelved at `312c0e0`; tree clean on `feat/control-plane-phase-0`; conflict dupli
 
 Closes C1/C2/M1/M4 and de-risks everything after it. Read-only against both platforms.
 
-1. **Verify ElevenLabs feature mapping** against live API docs for each row of §4.3 — especially whether conversational flows/graphs exist (M1), transfer semantics, pre-call variable population, and data-collection expressiveness.
+1. ~~**Verify ElevenLabs feature mapping**~~ ✅ **done 2026-08-08** — [capability spike §1](./control-plane-phase-0.6-capability-spike.md). All five §4.3 rows verified; no S6 gap. Graphs *do* exist (§4.5); pre-call fetch confirmed; new 25-item data-collection cap found.
 2. **Check ElevenLabs retention and privacy controls** (§5.3) — zero/reduced-retention modes, what conversation data is stored vendor-side, and any per-agent privacy settings. With one shared workspace this is the main lever for limiting vendor-held client data, and it feeds the §6 compliance answers.
 3. **Prototype the two real gaps** end-to-end in n8n: Cal.com booking (slots/days/timezone) and SMS opt-in. These are the only capabilities with no native counterpart.
 4. **Reliability baseline** from `workflow_runs` — noting `WorkflowRunState` has no failure state (`api/enums.py:66`), so use initialized-never-completed as the proxy and document the method.
-5. **Per-agent complexity profile** for all 91 agents: action types used, extractor count, transfer targets, telephony config. Output ranks agents and **names the Phase 3 gate client**.
+5. **Per-agent complexity profile** for all 91 agents: action types used, extractor count, transfer targets, telephony config. Output ranks agents and **names the Phase 3 gate client**. Must report **max extractors on any single agent** against the 25-item cap (§4.3) — an agent over the cap needs splitting and that is Phase 4 cost.
 6. **Set the BYO-LLM p95 latency budget** referenced by §9.2, so the cap has a number behind it rather than a placeholder.
 
 **Acceptance:** a written gap report; a working n8n booking prototype; a stated reliability baseline; a ranked migration order; retention controls documented. **If a gap has no viable mapping, that surfaces here — before anything is built.**
@@ -218,6 +232,7 @@ Full design in §10. Six steps: crypto module → transparent encrypt/decrypt in
 Dual-source — engine and ElevenLabs calls both land in `workflow_runs`.
 
 - `api/routes/elevenlabs_webhooks.py`: signature-verified, idempotent on `elevenlabs_conversation_id`, resolves client from workspace/agent, writes run + transcript JSONB + extracted data + usage rollup.
+- **Conversation initiation webhook** (§4.3, pre-call fetch) — a *second* inbound endpoint, receiving `caller_id` / `agent_id` / `called_number` / `call_sid` and returning `dynamic_variables` + overrides. Unlike the post-call webhook it sits **in the call path**: it must be fast and it must **fail open**, returning defaults on error so a timeout never drops a call. Its URL is workspace-scoped, so one endpoint serves every client and resolves the org from `agent_id` — the same resolution path as the post-call webhook, built once.
 - **Reconciliation backfill (H4):** a scheduled job listing conversations from the ElevenLabs API for the last N hours and inserting anything the webhook missed. Idempotency makes it safe to run often.
 - Recording: fetch audio, store in MinIO per-client, set `recording_url` + `storage_backend`.
 
@@ -225,6 +240,8 @@ Dual-source — engine and ElevenLabs calls both land in `workflow_runs`.
 
 ### Phase 3 — Agent editor + gate
 New `/agents` route beside the existing `/workflow` editor: client switcher, agent list, editor (prompt, voice, language, tools, KB, settings), draft → publish.
+
+**Scope decision outstanding (§12.7, from M1).** ElevenLabs Agent Workflows means branching agents are graph-shaped. A prompt/voice/tools editor cannot express one. Either this phase also covers workflow authoring — materially more UI than budgeted in §11 — or branching agents are authored in the ElevenLabs dashboard and our editor owns only the flat surface. Decide before building the editor, not during.
 
 **The gate, in two steps (C2):**
 
@@ -253,6 +270,8 @@ Per client, in Phase 0.6 ranked order, unregulated first:
 1. **Data retention first (H6).** `workflow_runs` FKs to `workflows`, `workflow_definitions`, `campaigns`, `queued_runs` (`api/db/models.py:453,457,492,494`) — three of those four tables get dropped. Denormalise what reporting needs onto `workflow_runs`, null the dead FKs, and **verify a pre-migration call still resolves end-to-end with playable recording** before any drop runs.
 2. Delete: `pipecat/` submodule; `api/services/pipecat|audio|smart_turn|looptalk|campaign`; `workflow/pipecat_engine*.py`, `workflow_graph.py`, `node_specs/`; `telephony/providers/`; `api/native/rnnoise`; `dograh_pcm_cache`; `evals/`; routes `webrtc_signaling`, `agent_stream`, `turn_credentials`, `telephony`, `campaign`, `looptalk`, embed stack; `ui/src/components/flow/`, `ui/src/app/workflow|campaigns|looptalk|telephony-configurations`.
 3. **Graph-authoring surface (decision 2026-08-08 — the `noralai.noralvoice` plugin is not needed).** Delete `api/mcp_server/` (13 files; `create_workflow`, `save_workflow`, `get_workflow_code`, `node_types`, `catalog`, `workflows` — all graph-shaped), plus `sdk/python/src/noralai_voice/typed/`, `sdk/typescript/src/typed/`, and the `workflow.py` / `workflow.ts` graph builders.
+
+   **Corrected rationale (M1, 2026-08-08).** These go *not* because graphs have no counterpart — ElevenLabs Agent Workflows is exactly that counterpart (§4.5) — but because they author **Dograh's** graph shape, which by Phase 5 no longer runs anything. Deleting them is removing a dead authoring surface, not abandoning graph authoring. If we later want programmatic graph authoring, it is written against the vendor's workflow API, not resurrected from here.
 
    **Keep** the SDK codegen scaffolding: `codegen.py`, `_generated_client`, `_generated_models`, `client`, `errors`, `_validation` are driven by `@sdk_expose` across 12 route files and are generic API-client generation, not graph authoring. They retarget at the control-plane routes rather than being deleted.
 
@@ -379,6 +398,8 @@ Phase 4 dominates and is the one to resource deliberately.
 4. **Compliance confirmations** (§6) — block Phase 4 for the regulated clients, not the whole phase. Now also need to account for vendor-side commingling (§5.3).
 5. ~~NoralOS plugin decision~~ — resolved 2026-08-08: not needed. Removed as a Phase 3 gate; the graph-authoring surface is deleted in Phase 5 step 3, coordinated with the NoralOS repo.
 6. `.claude/` was added to `.gitignore` in passing — keep or revert.
+7. **Phase 3 editor scope — does our editor author ElevenLabs workflow graphs?** (New 2026-08-08, from M1/§4.5.) Blocks the Phase 3 editor build only; nothing before it. Needs a human decision between: (a) our editor covers workflow authoring, costing materially more UI than §11 budgets; (b) our editor owns the flat surface and branching agents are authored in the ElevenLabs dashboard, accepting a split authoring story; (c) defer — ship flat, revisit once the complexity profile (Phase 0.6 task 5) says how many of the 91 agents actually branch. **(c) is likely right, and the profile answers it.**
+8. **Confirm the data-collection item cap for our plan tier** (§4.3). Docs say 25, or 40 on Trial/Enterprise. Cheap to confirm in-product; it sets the threshold the complexity profile measures against.
 
 ---
 
